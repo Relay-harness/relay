@@ -826,9 +826,8 @@ relay_lab_cell() {
 	# The background is four lanes with something travelling them.
 	#
 	# What was here before was a particle field with oscilloscope traces and scan
-	# bars — the visual vocabulary every AI product reaches for, and inherited from
-	# the project this was forked from. It said nothing about Relay, and looked
-	# like what it was: someone else's screen with our mark on it.
+	# bars — the visual vocabulary every AI product reaches for. It said nothing
+	# about Relay.
 	#
 	# A relay is a thing handed along a line. So: lanes, a packet running each one,
 	# and the mark sitting across the middle of them. The lanes are not drawn inside
