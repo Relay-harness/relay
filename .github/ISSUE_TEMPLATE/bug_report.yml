@@ -1,0 +1,30 @@
+name: Bug report
+description: Something in Relay, the installer or a blueprint does not work.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you ran, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Output
+      description: The command's output. Remove any keys or tokens first.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: Relay version
+      description: The output of `relay --version`.
+      placeholder: "0.6.118"
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: System
+      placeholder: "macOS 15, Node 22.8"

@@ -1,0 +1,22 @@
+# Relay blueprint: Next.js (App Router, TypeScript, npm).
+# How Relay prepares and checks this repository. A task is done only when every
+# command under test, lint and build exits 0 in a clean checkout.
+# Using pnpm, yarn or bun? Change package_manager and the commands to match.
+version: 1
+runtime: node 22
+package_manager: npm
+initialize:
+  - npm ci
+test: []
+# Add your test command here once the project has one, for example:
+#   - npm test
+lint:
+  - npm run lint
+# next build also type-checks, so it is the type check.
+build:
+  - npm run build
+browser_tests: []
+secrets: []
+scope:
+  allow: ["**"]
+  deny: [".git/**", ".relay/blueprint.yaml", "**/.env", "**/.env.*", "**/*.pem", "**/*.key", ".next/**"]

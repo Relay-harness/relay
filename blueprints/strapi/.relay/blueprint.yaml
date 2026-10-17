@@ -1,0 +1,23 @@
+# Relay blueprint: Strapi 5 (TypeScript, npm).
+# How Relay prepares and checks this repository. A task is done only when every
+# command under test, lint and build exits 0 in a clean checkout.
+# Strapi projects start with no tests; add yours under test when you have them.
+version: 1
+runtime: node 22
+package_manager: npm
+initialize:
+  - npm ci
+test: []
+lint:
+  - npx tsc --noEmit
+build:
+  - npm run build
+secrets:
+  - APP_KEYS
+  - API_TOKEN_SALT
+  - ADMIN_JWT_SECRET
+  - TRANSFER_TOKEN_SALT
+  - JWT_SECRET
+scope:
+  allow: ["**"]
+  deny: [".git/**", ".relay/blueprint.yaml", "**/.env", "**/.env.*", "**/*.pem", "**/*.key", "dist/**", ".strapi/**", ".tmp/**"]

@@ -1,0 +1,21 @@
+# Relay blueprint: Turborepo (pnpm workspaces).
+# How Relay prepares and checks this repository. A task is done only when every
+# command under test, lint and build exits 0 in a clean checkout.
+# Turbo runs each task in every workspace that defines it, so one command covers
+# the whole monorepo. Add a test task to turbo.json and list it under test.
+# create-turbo's template asks for Node 24 or newer and pnpm 11.
+version: 1
+runtime: node 24
+package_manager: pnpm
+initialize:
+  - pnpm install --frozen-lockfile
+test: []
+lint:
+  - pnpm turbo run lint
+  - pnpm turbo run check-types
+build:
+  - pnpm turbo run build
+secrets: []
+scope:
+  allow: ["**"]
+  deny: [".git/**", ".relay/blueprint.yaml", "**/.env", "**/.env.*", "**/*.pem", "**/*.key", "**/.next/**", "**/dist/**", ".turbo/**", "**/.turbo/**"]

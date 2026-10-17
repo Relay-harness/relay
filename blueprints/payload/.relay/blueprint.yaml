@@ -1,0 +1,32 @@
+# Relay blueprint: Payload 3 (Next.js, TypeScript, pnpm).
+# How Relay prepares and checks this repository. A task is done only when every
+# command under test, lint and build exits 0 in a clean checkout.
+# The template's SQLite database needs nothing running. On Postgres or MongoDB,
+# uncomment the service below and name the service in your compose file.
+version: 1
+runtime: node 22
+package_manager: pnpm
+initialize:
+  - pnpm install --frozen-lockfile
+maintenance:
+  - pnpm generate:types
+  - pnpm generate:importmap
+test:
+  - pnpm test:int
+lint:
+  - pnpm exec tsc --noEmit
+# Add `pnpm lint` here once your ESLint config loads. The blank template's config
+# (FlatCompat over eslint-config-next 16) does not load as created, October 2026.
+build:
+  - pnpm build
+browser_tests:
+  - pnpm test:e2e
+# services:
+#   - name: postgres
+#     start: docker compose -f docker-compose.yml up -d postgres
+secrets:
+  - PAYLOAD_SECRET
+  - DATABASE_URI
+scope:
+  allow: ["**"]
+  deny: [".git/**", ".relay/blueprint.yaml", "**/.env", "**/.env.*", "**/*.pem", "**/*.key", ".next/**"]

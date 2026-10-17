@@ -1,0 +1,845 @@
+{
+  "round": 1,
+  "generatedAt": "2026-10-17T07:11:10.426Z",
+  "status": "complete",
+  "repository": "https://github.com/cicada0007/relay-bench",
+  "commit": "dd90b73d48458368b3fb272484a019e2916a6859",
+  "preregistration": "https://github.com/cicada0007/relay-bench/blob/main/PREREGISTRATION.md",
+  "statistics": {
+    "unit": "The task (an item in test G). A tool's score on a task is its mean over that task's runs.",
+    "comparison": "The mean over tasks both tools ran of (Relay's score minus the other tool's score), in points.",
+    "interval": "95% percentile bootstrap over tasks, 10000 resamples, seed 20261015.",
+    "primary": "Test A, requirements met: Relay against Claude Code and Relay against Prime Agent. Everything else is secondary."
+  },
+  "measures": {
+    "score": "Requirements met (long requests) or solved (everyday changes, Terminal-Bench, long-context sets), percent.",
+    "checksPassed": "The share of the judge's individual checks a run passes (long requests, secondary), percent.",
+    "allRunsPass": "The share of tasks where every run succeeded, percent.",
+    "saidDoneButFailed": "The share of runs where the tool reported success and the judge failed it, percent.",
+    "costPerSolvedUsd": "Metered cost divided by successful runs (every part met, or solved).",
+    "medianMinutes": "Median wall time of a run."
+  },
+  "tests": [
+    {
+      "id": "A",
+      "title": "Long requests, Sonnet 5.5",
+      "primary": true,
+      "model": "claude-sonnet-5-5",
+      "measure": "requirements met",
+      "measureNote": "The share of a request's 6 parts the hidden judge passes; checks passed is the share of the judge's individual checks.",
+      "unit": "task",
+      "status": "complete",
+      "stageLogEnd": "stopped: the next run could take the stage past its 190 cap",
+      "plannedRuns": 108,
+      "runs": 102,
+      "capUsd": 190,
+      "spentUsd": 185.69183660000002,
+      "runsNotMade": [
+        {
+          "task": "py-text-adventure",
+          "tool": "relay",
+          "rep": 3
+        },
+        {
+          "task": "py-text-adventure",
+          "tool": "prime-agent",
+          "rep": 3
+        },
+        {
+          "task": "py-text-adventure",
+          "tool": "claude-code",
+          "rep": 3
+        },
+        {
+          "task": "py-vcs-lite",
+          "tool": "relay",
+          "rep": 3
+        },
+        {
+          "task": "py-vcs-lite",
+          "tool": "prime-agent",
+          "rep": 3
+        },
+        {
+          "task": "py-vcs-lite",
+          "tool": "claude-code",
+          "rep": 3
+        }
+      ],
+      "notes": [
+        "Test A stopped at its $190 cap after 102 of 108 runs: the next run could have taken it past the cap. The founders chose to keep the cap. The runs not made are the third repetition of the last two tasks in the run order, for every tool, so every comparison is still on the same tasks for every tool."
+      ],
+      "tools": {
+        "relay": {
+          "name": "Relay",
+          "tasks": 12,
+          "runs": 34,
+          "score": 90.50925925925925,
+          "checksPassed": 95.50827087591794,
+          "allRunsPass": 50,
+          "saidDoneButFailed": 26.47058823529412,
+          "costUsd": 60.107190700000004,
+          "costPerSolvedUsd": 2.6133561173913047,
+          "medianMinutes": 11.294466666666667
+        },
+        "claude-code": {
+          "name": "Claude Code",
+          "tasks": 12,
+          "runs": 34,
+          "score": 98.61111111111111,
+          "checksPassed": 99.79118049938484,
+          "allRunsPass": 75,
+          "saidDoneButFailed": 5.88235294117647,
+          "costUsd": 68.49865989999999,
+          "costPerSolvedUsd": 2.2096341903225802,
+          "medianMinutes": 11.58225
+        },
+        "prime-agent": {
+          "name": "Prime Agent",
+          "tasks": 12,
+          "runs": 34,
+          "score": 92.5925925925926,
+          "checksPassed": 97.0744641255477,
+          "allRunsPass": 41.66666666666667,
+          "saidDoneButFailed": 23.52941176470588,
+          "costUsd": 57.085986,
+          "costPerSolvedUsd": 2.37858275,
+          "medianMinutes": 10.27265
+        }
+      },
+      "comparisons": {
+        "claude-code": {
+          "name": "Claude Code",
+          "tasks": 12,
+          "difference": -8.101851851851853,
+          "low": -15.972222222222223,
+          "high": -1.38888888888889
+        },
+        "prime-agent": {
+          "name": "Prime Agent",
+          "tasks": 12,
+          "difference": -2.0833333333333344,
+          "low": -11.342592592592597,
+          "high": 6.944444444444439
+        }
+      }
+    },
+    {
+      "id": "B-everyday",
+      "test": "B",
+      "title": "Everyday changes, Haiku 5.5",
+      "primary": false,
+      "model": "claude-haiku-5-5",
+      "measure": "solved",
+      "unit": "task",
+      "status": "complete",
+      "plannedRuns": 144,
+      "runs": 144,
+      "runsNotMade": [],
+      "spentUsd": 5.181364769999999,
+      "tools": {
+        "relay": {
+          "name": "Relay",
+          "tasks": 12,
+          "runs": 36,
+          "score": 91.66666666666666,
+          "checksPassed": 93.5185185185185,
+          "allRunsPass": 83.33333333333334,
+          "saidDoneButFailed": 0,
+          "costUsd": 1.4954838799999997,
+          "costPerSolvedUsd": 0.045317693333333325,
+          "medianMinutes": 3.8025333333333333
+        },
+        "claude-code": {
+          "name": "Claude Code",
+          "tasks": 12,
+          "runs": 36,
+          "score": 100,
+          "checksPassed": 100,
+          "allRunsPass": 100,
+          "saidDoneButFailed": 0,
+          "costUsd": 1.2259155850000003,
+          "costPerSolvedUsd": 0.034053210694444454,
+          "medianMinutes": 2.1992833333333333
+        },
+        "prime-agent": {
+          "name": "Prime Agent",
+          "tasks": 12,
+          "runs": 36,
+          "score": 100,
+          "checksPassed": 100,
+          "allRunsPass": 100,
+          "saidDoneButFailed": 0,
+          "costUsd": 1.161908635,
+          "costPerSolvedUsd": 0.03227523986111111,
+          "medianMinutes": 2.4593166666666666
+        },
+        "hermes": {
+          "name": "Hermes",
+          "tasks": 12,
+          "runs": 36,
+          "score": 100,
+          "checksPassed": 100,
+          "allRunsPass": 100,
+          "saidDoneButFailed": 0,
+          "costUsd": 1.2980566699999996,
+          "costPerSolvedUsd": 0.03605712972222221,
+          "medianMinutes": 3.0662
+        }
+      },
+      "comparisons": {
+        "claude-code": {
+          "name": "Claude Code",
+          "tasks": 12,
+          "difference": -8.333333333333334,
+          "low": -19.444444444444446,
+          "high": 0
+        },
+        "prime-agent": {
+          "name": "Prime Agent",
+          "tasks": 12,
+          "difference": -8.333333333333334,
+          "low": -19.444444444444446,
+          "high": 0
+        },
+        "hermes": {
+          "name": "Hermes",
+          "tasks": 12,
+          "difference": -8.333333333333334,
+          "low": -19.444444444444446,
+          "high": 0
+        }
+      }
+    },
+    {
+      "id": "B-long",
+      "test": "B",
+      "title": "Long requests, Haiku 5.5",
+      "primary": false,
+      "model": "claude-haiku-5-5",
+      "measure": "requirements met",
+      "unit": "task",
+      "status": "complete",
+      "plannedRuns": 48,
+      "runs": 48,
+      "runsNotMade": [],
+      "spentUsd": 57.399366785,
+      "tools": {
+        "relay": {
+          "name": "Relay",
+          "tasks": 12,
+          "runs": 12,
+          "score": 73.6111111111111,
+          "checksPassed": 82.94755711551377,
+          "allRunsPass": 50,
+          "saidDoneButFailed": 25,
+          "costUsd": 7.435760985000001,
+          "costPerSolvedUsd": 1.2392934975,
+          "medianMinutes": 28.300116666666668
+        },
+        "claude-code": {
+          "name": "Claude Code",
+          "tasks": 12,
+          "runs": 12,
+          "score": 93.05555555555557,
+          "checksPassed": 99.12470264637449,
+          "allRunsPass": 58.333333333333336,
+          "saidDoneButFailed": 25,
+          "costUsd": 17.37814024,
+          "costPerSolvedUsd": 2.482591462857143,
+          "medianMinutes": 16.904716666666666
+        },
+        "prime-agent": {
+          "name": "Prime Agent",
+          "tasks": 12,
+          "runs": 12,
+          "score": 58.333333333333336,
+          "checksPassed": 68.35028613666384,
+          "allRunsPass": 25,
+          "saidDoneButFailed": 41.66666666666667,
+          "costUsd": 13.50151604,
+          "costPerSolvedUsd": 4.5005053466666665,
+          "medianMinutes": 42.55318333333334
+        },
+        "hermes": {
+          "name": "Hermes",
+          "tasks": 12,
+          "runs": 12,
+          "score": 90.27777777777779,
+          "checksPassed": 98.56222619380515,
+          "allRunsPass": 66.66666666666666,
+          "saidDoneButFailed": 16.666666666666664,
+          "costUsd": 19.083949520000004,
+          "costPerSolvedUsd": 2.3854936900000006,
+          "medianMinutes": 19.499183333333335
+        }
+      },
+      "comparisons": {
+        "claude-code": {
+          "name": "Claude Code",
+          "tasks": 12,
+          "difference": -19.444444444444446,
+          "low": -38.88888888888889,
+          "high": -2.777777777777779
+        },
+        "prime-agent": {
+          "name": "Prime Agent",
+          "tasks": 12,
+          "difference": 15.277777777777777,
+          "low": -11.111111111111114,
+          "high": 37.50000000000001
+        },
+        "hermes": {
+          "name": "Hermes",
+          "tasks": 12,
+          "difference": -16.666666666666668,
+          "low": -36.11111111111111,
+          "high": -1.3888888888888893
+        }
+      }
+    },
+    {
+      "id": "B",
+      "title": "Test B as one test (everyday changes and long requests together)",
+      "primary": false,
+      "combined": true,
+      "model": "claude-haiku-5-5",
+      "measure": "solved or requirements met",
+      "unit": "task",
+      "status": "complete",
+      "stageLogEnd": "stage B finished: $62.58 spent",
+      "plannedRuns": 192,
+      "runs": 192,
+      "capUsd": 80,
+      "spentUsd": 62.580731555,
+      "notes": [
+        "The analysis run on test B whole (node runner/analyze.mjs --test B), as the pre-registration defines the test."
+      ],
+      "tools": {
+        "relay": {
+          "name": "Relay",
+          "tasks": 24,
+          "runs": 48,
+          "score": 82.63888888888889,
+          "checksPassed": 88.23303781701614,
+          "allRunsPass": 66.66666666666666,
+          "saidDoneButFailed": 6.25,
+          "costUsd": 8.931244865,
+          "costPerSolvedUsd": 0.2290062785897436,
+          "medianMinutes": 4.68625
+        },
+        "claude-code": {
+          "name": "Claude Code",
+          "tasks": 24,
+          "runs": 48,
+          "score": 96.52777777777776,
+          "checksPassed": 99.56235132318723,
+          "allRunsPass": 79.16666666666666,
+          "saidDoneButFailed": 6.25,
+          "costUsd": 18.604055825000003,
+          "costPerSolvedUsd": 0.4326524610465117,
+          "medianMinutes": 2.4313666666666665
+        },
+        "prime-agent": {
+          "name": "Prime Agent",
+          "tasks": 24,
+          "runs": 48,
+          "score": 79.16666666666669,
+          "checksPassed": 84.17514306833192,
+          "allRunsPass": 62.5,
+          "saidDoneButFailed": 10.416666666666668,
+          "costUsd": 14.663424675000002,
+          "costPerSolvedUsd": 0.37598524807692313,
+          "medianMinutes": 3.6624166666666667
+        },
+        "hermes": {
+          "name": "Hermes",
+          "tasks": 24,
+          "runs": 48,
+          "score": 95.13888888888889,
+          "checksPassed": 99.28111309690256,
+          "allRunsPass": 83.33333333333334,
+          "saidDoneButFailed": 4.166666666666666,
+          "costUsd": 20.382006190000002,
+          "costPerSolvedUsd": 0.46322741340909096,
+          "medianMinutes": 3.2962
+        }
+      },
+      "comparisons": {
+        "claude-code": {
+          "name": "Claude Code",
+          "tasks": 24,
+          "difference": -13.888888888888891,
+          "low": -26.388888888888886,
+          "high": -4.166666666666667
+        },
+        "prime-agent": {
+          "name": "Prime Agent",
+          "tasks": 24,
+          "difference": 3.472222222222222,
+          "low": -11.805555555555555,
+          "high": 17.36111111111111
+        },
+        "hermes": {
+          "name": "Hermes",
+          "tasks": 24,
+          "difference": -12.5,
+          "low": -24.305555555555557,
+          "high": -2.7777777777777786
+        }
+      }
+    },
+    {
+      "id": "D",
+      "title": "Faults during a long request, Haiku 5.5",
+      "primary": false,
+      "model": "claude-haiku-5-5",
+      "measure": "requirements met",
+      "unit": "task",
+      "status": "complete",
+      "stageLogEnd": "stage D finished: $16.97 spent",
+      "plannedRuns": 24,
+      "runs": 24,
+      "capUsd": 25,
+      "spentUsd": 16.965174345,
+      "faults": {
+        "kill": "The tool's process group is killed once (SIGKILL), 120 seconds after its first model request.",
+        "network": "For 10 minutes, starting 120 seconds after the first model request, every model request's connection is dropped.",
+        "errors": "For 10 minutes, starting 120 seconds after the first model request, every model request is answered 529 overloaded_error."
+      },
+      "finishedWithNobody": {
+        "relay": {
+          "name": "Relay",
+          "kill": {
+            "runs": 2,
+            "finishedWithNobody": 1,
+            "restarts": 2
+          },
+          "network": {
+            "runs": 2,
+            "finishedWithNobody": 1,
+            "restarts": 0
+          },
+          "errors": {
+            "runs": 2,
+            "finishedWithNobody": 2,
+            "restarts": 0
+          }
+        },
+        "claude-code": {
+          "name": "Claude Code",
+          "kill": {
+            "runs": 2,
+            "finishedWithNobody": 2,
+            "restarts": 2
+          },
+          "network": {
+            "runs": 2,
+            "finishedWithNobody": 2,
+            "restarts": 6
+          },
+          "errors": {
+            "runs": 2,
+            "finishedWithNobody": 1,
+            "restarts": 4
+          }
+        },
+        "prime-agent": {
+          "name": "Prime Agent",
+          "kill": {
+            "runs": 2,
+            "finishedWithNobody": 0,
+            "restarts": 1
+          },
+          "network": {
+            "runs": 2,
+            "finishedWithNobody": 0,
+            "restarts": 6
+          },
+          "errors": {
+            "runs": 2,
+            "finishedWithNobody": 0,
+            "restarts": 6
+          }
+        },
+        "hermes": {
+          "name": "Hermes",
+          "kill": {
+            "runs": 2,
+            "finishedWithNobody": 2,
+            "restarts": 2
+          },
+          "network": {
+            "runs": 2,
+            "finishedWithNobody": 1,
+            "restarts": 4
+          },
+          "errors": {
+            "runs": 2,
+            "finishedWithNobody": 2,
+            "restarts": 2
+          }
+        }
+      },
+      "finishedWithNobodyRule": "The run ended with the judge passing all 6 parts and no person acting. Every tool runs inside the same restart loop, which runs the tool's own resume command up to 3 times.",
+      "notes": [
+        "Test D runs one long request, so there is no interval over tasks: the comparisons are left out and each fault's runs are shown."
+      ],
+      "tools": {
+        "relay": {
+          "name": "Relay",
+          "tasks": 1,
+          "runs": 6,
+          "score": 80.55555555555557,
+          "checksPassed": 83.33333333333334,
+          "allRunsPass": 0,
+          "saidDoneButFailed": 16.666666666666664,
+          "costUsd": 2.5720812,
+          "costPerSolvedUsd": 0.6430203,
+          "medianMinutes": 40.465583333333335
+        },
+        "claude-code": {
+          "name": "Claude Code",
+          "tasks": 1,
+          "runs": 6,
+          "score": 97.22222222222221,
+          "checksPassed": 99.74358974358975,
+          "allRunsPass": 0,
+          "saidDoneButFailed": 16.666666666666664,
+          "costUsd": 6.014212910000001,
+          "costPerSolvedUsd": 1.2028425820000002,
+          "medianMinutes": 22.309933333333333
+        },
+        "prime-agent": {
+          "name": "Prime Agent",
+          "tasks": 1,
+          "runs": 6,
+          "score": 2.7777777777777777,
+          "checksPassed": 6.153846153846154,
+          "allRunsPass": 0,
+          "saidDoneButFailed": 16.666666666666664,
+          "costUsd": 1.43977842,
+          "costPerSolvedUsd": null,
+          "medianMinutes": 3.6020333333333334
+        },
+        "hermes": {
+          "name": "Hermes",
+          "tasks": 1,
+          "runs": 6,
+          "score": 97.22222222222223,
+          "checksPassed": 99.74358974358975,
+          "allRunsPass": 0,
+          "saidDoneButFailed": 16.666666666666664,
+          "costUsd": 6.939101815000001,
+          "costPerSolvedUsd": 1.3878203630000001,
+          "medianMinutes": 23.680183333333332
+        }
+      },
+      "comparisons": {}
+    },
+    {
+      "id": "F",
+      "title": "Terminal-Bench 2.1, Haiku 5.5",
+      "primary": false,
+      "model": "claude-haiku-5-5",
+      "measure": "solved",
+      "unit": "task",
+      "status": "complete",
+      "stageLogEnd": "test F finished: $31.1412 spent",
+      "plannedRuns": 356,
+      "runs": 356,
+      "capUsd": 45,
+      "spentUsd": 31.158898975000003,
+      "meteredUsd": 11.158898975000005,
+      "unmeteredAttempts": 20,
+      "droppedTasks": [
+        "terminal-bench/qemu-alpine-ssh",
+        "terminal-bench/qemu-startup"
+      ],
+      "notes": [
+        "89 public tasks, 2 trials per task per tool. Harbor reports no 'said done' signal, so said done but failed is not measured here.",
+        "A task whose infrastructure failed twice is dropped for every tool, and listed.",
+        "Spend includes every attempt, retries included (F/spend.jsonl). An attempt whose meter log was lost counts at its full cap, so the stage's spend is an upper bound; meteredUsd is what the meter logged.",
+        "The meter does not price web searches ($10 per 1,000). Claude Code made 6 in test F, so its cost is about $0.06 low; Relay made none."
+      ],
+      "tools": {
+        "relay": {
+          "name": "Relay",
+          "tasks": 87,
+          "runs": 174,
+          "score": 71.83908045977012,
+          "scoreLow": 63.2183908045977,
+          "scoreHigh": 80.45977011494253,
+          "checksPassed": null,
+          "allRunsPass": 65.51724137931035,
+          "saidDoneButFailed": null,
+          "costUsd": 4.000450165,
+          "costPerSolvedUsd": 0.03200360132,
+          "medianMinutes": 1.5670666666666666,
+          "stoppedAtCap": 0,
+          "unmeteredTrials": 0
+        },
+        "claude-code": {
+          "name": "Claude Code",
+          "tasks": 87,
+          "runs": 174,
+          "score": 83.33333333333333,
+          "scoreLow": 76.4367816091954,
+          "scoreHigh": 89.65517241379311,
+          "checksPassed": null,
+          "allRunsPass": 75.86206896551724,
+          "saidDoneButFailed": null,
+          "costUsd": 6.898719185000003,
+          "costPerSolvedUsd": 0.04757737368965519,
+          "medianMinutes": 1.4331166666666666,
+          "stoppedAtCap": 0,
+          "unmeteredTrials": 2
+        }
+      },
+      "comparisons": {
+        "claude-code": {
+          "name": "Claude Code",
+          "tasks": 87,
+          "difference": -11.494252873563218,
+          "low": -19.54022988505747,
+          "high": -3.4482758620689653
+        }
+      }
+    },
+    {
+      "id": "G-oolong",
+      "test": "G",
+      "title": "OOLONG (yahoo, 128k), Haiku 5.5",
+      "primary": false,
+      "model": "claude-haiku-5-5",
+      "measure": "solved",
+      "unit": "item",
+      "status": "complete",
+      "stageLogEnd": "test G finished: $1.5005 spent",
+      "plannedRuns": 150,
+      "runs": 150,
+      "spentUsd": 0.43459074499999995,
+      "droppedItems": [],
+      "notes": [
+        "One run per item, scored by the benchmark's own published scorer; no model judges. Cost per solved counts items scored 1."
+      ],
+      "tools": {
+        "relay": {
+          "name": "Relay",
+          "tasks": 50,
+          "runs": 50,
+          "score": 10,
+          "checksPassed": null,
+          "allRunsPass": null,
+          "saidDoneButFailed": null,
+          "costUsd": 0.19061042000000003,
+          "costPerItemUsd": 0.0038122084000000007,
+          "costPerSolvedUsd": 0.03812208400000001,
+          "medianMinutes": 0.27923333333333333,
+          "unparsed": 0,
+          "outputTokens": 106071,
+          "stoppedAtCap": 0,
+          "timedOut": 0
+        },
+        "claude-code": {
+          "name": "Claude Code",
+          "tasks": 50,
+          "runs": 50,
+          "score": 2,
+          "checksPassed": null,
+          "allRunsPass": null,
+          "saidDoneButFailed": null,
+          "costUsd": 0.09114377000000003,
+          "costPerItemUsd": 0.0018228754000000006,
+          "costPerSolvedUsd": 0.09114377000000003,
+          "medianMinutes": 0.18943333333333334,
+          "unparsed": 0,
+          "outputTokens": 48148,
+          "stoppedAtCap": 0,
+          "timedOut": 0
+        },
+        "prime-agent": {
+          "name": "Prime Agent",
+          "tasks": 50,
+          "runs": 50,
+          "score": 6,
+          "checksPassed": null,
+          "allRunsPass": null,
+          "saidDoneButFailed": null,
+          "costUsd": 0.15283655499999999,
+          "costPerItemUsd": 0.0030567310999999996,
+          "costPerSolvedUsd": 0.05094551833333333,
+          "medianMinutes": 0.22596666666666668,
+          "unparsed": 0,
+          "outputTokens": 65981,
+          "stoppedAtCap": 0,
+          "timedOut": 0
+        }
+      },
+      "comparisons": {
+        "claude-code": {
+          "name": "Claude Code",
+          "tasks": 50,
+          "difference": 8,
+          "low": 0,
+          "high": 18
+        },
+        "prime-agent": {
+          "name": "Prime Agent",
+          "tasks": 50,
+          "difference": 4,
+          "low": -8,
+          "high": 16
+        }
+      }
+    },
+    {
+      "id": "G-longbench",
+      "test": "G",
+      "title": "LongBench v2, Haiku 5.5",
+      "primary": false,
+      "model": "claude-haiku-5-5",
+      "measure": "solved",
+      "unit": "item",
+      "status": "complete",
+      "stageLogEnd": "test G finished: $1.5005 spent",
+      "plannedRuns": 150,
+      "runs": 150,
+      "spentUsd": 1.0658922549999996,
+      "droppedItems": [],
+      "notes": [
+        "One run per item, scored by the benchmark's own published scorer; no model judges. Cost per solved counts items scored 1."
+      ],
+      "tools": {
+        "relay": {
+          "name": "Relay",
+          "tasks": 50,
+          "runs": 50,
+          "score": 60,
+          "checksPassed": null,
+          "allRunsPass": null,
+          "saidDoneButFailed": null,
+          "costUsd": 0.37187389499999995,
+          "costPerItemUsd": 0.0074374778999999995,
+          "costPerSolvedUsd": 0.012395796499999999,
+          "medianMinutes": 0.3208166666666667,
+          "unparsed": 2,
+          "outputTokens": 77848,
+          "stoppedAtCap": 0,
+          "timedOut": 0
+        },
+        "claude-code": {
+          "name": "Claude Code",
+          "tasks": 50,
+          "runs": 50,
+          "score": 60,
+          "checksPassed": null,
+          "allRunsPass": null,
+          "saidDoneButFailed": null,
+          "costUsd": 0.23469735000000003,
+          "costPerItemUsd": 0.004693947,
+          "costPerSolvedUsd": 0.007823245000000001,
+          "medianMinutes": 0.2492,
+          "unparsed": 3,
+          "outputTokens": 98900,
+          "stoppedAtCap": 0,
+          "timedOut": 0
+        },
+        "prime-agent": {
+          "name": "Prime Agent",
+          "tasks": 50,
+          "runs": 50,
+          "score": 57.99999999999999,
+          "checksPassed": null,
+          "allRunsPass": null,
+          "saidDoneButFailed": null,
+          "costUsd": 0.4593210100000001,
+          "costPerItemUsd": 0.009186420200000002,
+          "costPerSolvedUsd": 0.015838655517241382,
+          "medianMinutes": 0.20353333333333334,
+          "unparsed": 2,
+          "outputTokens": 90687,
+          "stoppedAtCap": 0,
+          "timedOut": 0
+        }
+      },
+      "comparisons": {
+        "claude-code": {
+          "name": "Claude Code",
+          "tasks": 50,
+          "difference": 0,
+          "low": -10,
+          "high": 10
+        },
+        "prime-agent": {
+          "name": "Prime Agent",
+          "tasks": 50,
+          "difference": 2,
+          "low": -4,
+          "high": 10
+        }
+      }
+    }
+  ],
+  "testsNotRun": [
+    {
+      "id": "C",
+      "title": "GPT-6.1 Sol and GPT-6 Luna",
+      "reason": "Not run: the round has no OpenAI credit (amendment 3)."
+    },
+    {
+      "id": "E",
+      "title": "Learning",
+      "reason": "Not run: it needs a Relay change (lessons that can be held still) and 60 further tasks (amendment 3)."
+    }
+  ],
+  "cuts": [
+    "Test B runs the 12 long requests once each instead of 3 times; the 12 everyday changes run 3 times (amendment 2).",
+    "Test D runs one long request instead of two (amendment 2).",
+    "Test A was not shrunk; it stopped at its $190 cap after 102 of 108 runs."
+  ],
+  "pilotTasks": {
+    "tasks": [
+      "node-spreadsheet",
+      "py-mini-sql"
+    ],
+    "note": "The large pilot ran on these two long requests and found four Relay defects, fixed in Relay 0.6.118 before the round (amendment 2)."
+  },
+  "pins": {
+    "sandboxTemplate": "relay-bench-round-1",
+    "node": "22",
+    "relay": "0.6.118",
+    "primeAgent": "0.10.0",
+    "claudeCode": "2.1.300",
+    "hermes": "0.22.2",
+    "terminalBench": {
+      "harbor": "0.24.0",
+      "dataset": "terminal-bench/terminal-bench-2-1@sha256:7d7bdc1cbedad549fc1140404bd4dc45e5fd0ea7c4186773687d177ad3a0699a"
+    },
+    "longContext": {
+      "oolong": {
+        "dataset": "oolongbench/oolong-synth",
+        "revision": "f0d59eaf0febf130664cfceb710436c8e3216b2b",
+        "scorer": "https://github.com/abertsch72/oolong@0bb7eabe839218fee7fe8d007f41cfc2fd3ae24c"
+      },
+      "longbench": {
+        "dataset": "zai-org/LongBench-v2 (formerly THUDM/LongBench-v2)",
+        "revision": "2b48e494f2c7a2f0af81aae178e05c7e1dde0fe9",
+        "scorer": "https://github.com/THUDM/LongBench@2e00731f8d0bff23dc4325161044d0ed8af94c1e"
+      }
+    }
+  },
+  "spend": {
+    "note": "Model spend in US dollars, from the round's meter. The pilot figure is amendment 2's. Test F's figure counts each attempt whose meter log was lost at its full cap, so it is an upper bound (see test F's meteredUsd).",
+    "budgetUsd": 400,
+    "byTest": {
+      "pilot": 19.52,
+      "A": 185.69183660000002,
+      "B": 62.580731555,
+      "D": 16.965174345,
+      "F": 31.158898975000003,
+      "G": 1.5004829999999987
+    },
+    "totalUsd": 317.417124475
+  }
+}

@@ -1,0 +1,22 @@
+name: Blueprint request
+description: Ask for a blueprint for a stack that does not have one yet.
+labels: [blueprint]
+body:
+  - type: input
+    id: stack
+    attributes:
+      label: Stack
+      placeholder: "Django, Rails, SvelteKit, NestJS..."
+    validations:
+      required: true
+  - type: textarea
+    id: commands
+    attributes:
+      label: How a project on this stack is checked
+      description: The install, test, lint and build commands a typical project runs, and any service it needs (a database, a queue).
+  - type: input
+    id: starter
+    attributes:
+      label: Official starter
+      description: The command that creates a new project, if there is one.
+      placeholder: "npx sv create"

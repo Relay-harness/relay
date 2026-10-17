@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://relayevals.com/docs
+    about: How to install, set up a repository and run tasks.
+  - name: Report a security problem
+    url: https://github.com/Relay-harness/relay/security/advisories/new
+    about: Please report vulnerabilities privately.

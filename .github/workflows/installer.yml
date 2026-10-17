@@ -1,0 +1,52 @@
+name: installer
+
+# install.sh here must be the script https://relayevals.com/install.sh serves. Each day, and on every change, this
+# checks the two are the same file and that the script parses. When a release changes the hosted script, it is copied
+# here by a pull request, so the repository never shows a script people are not running.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  match:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parses with sh
+        run: sh -n install.sh
+      - name: Matches relayevals.com/install.sh
+        id: compare
+        run: |
+          curl -fsSL https://relayevals.com/install.sh -o /tmp/hosted.sh
+          here=$(sha256sum install.sh | cut -d' ' -f1)
+          hosted=$(sha256sum /tmp/hosted.sh | cut -d' ' -f1)
+          echo "repository: $here"
+          echo "hosted:     $hosted"
+          if [ "$here" = "$hosted" ]; then echo "same=true" >> "$GITHUB_OUTPUT"; else echo "same=false" >> "$GITHUB_OUTPUT"; fi
+      - name: Open a pull request with the hosted script
+        if: steps.compare.outputs.same == 'false' && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp /tmp/hosted.sh install.sh
+          branch=installer/match-hosted
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$branch"
+          git commit -am "install.sh: match relayevals.com/install.sh"
+          git push -f origin "$branch"
+          gh pr view "$branch" >/dev/null 2>&1 || gh pr create --head "$branch" --title "install.sh: match relayevals.com/install.sh" --body "The hosted installer changed. This copies it here unchanged."
+      - name: Fail a pull request that changes install.sh away from the hosted copy
+        if: steps.compare.outputs.same == 'false' && github.event_name == 'pull_request'
+        run: |
+          echo "install.sh differs from https://relayevals.com/install.sh"
+          exit 1

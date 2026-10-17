@@ -1,0 +1,22 @@
+# Relay blueprint: FastAPI (Python, uv, pytest, ruff, mypy).
+# How Relay prepares and checks this repository. A task is done only when every
+# command under test, lint and build exits 0 in a clean checkout.
+# Using poetry or pip? Change package_manager and swap "uv run" for your runner.
+version: 1
+runtime: python 3.12
+package_manager: uv
+initialize:
+  - uv sync
+test:
+  - uv run pytest
+lint:
+  - uv run ruff check .
+  - uv run ruff format --check .
+  - uv run mypy app
+build: []
+secrets: []
+scope:
+  allow: ["**"]
+  deny: [".git/**", ".relay/blueprint.yaml", "**/.env", "**/.env.*", "**/*.pem", "**/*.key", ".venv/**"]
+junit:
+  uv run pytest: .relay/junit/test.xml
