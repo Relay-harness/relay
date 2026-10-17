@@ -2,7 +2,7 @@
 
 Please report a vulnerability in Relay, its installer or anything in this repository privately, not in a public issue.
 
-- Use GitHub's private reporting: **Security → Report a vulnerability** on this repository.
+- Use GitHub's private reporting: **Security → Report a vulnerability** on this repository, or write to the Relay founders at arnav@relayevals.com.
 - Include what you found, how to reproduce it, and the Relay version (`relay --version`).
 
 We will reply as soon as we can. Please give us a reasonable time to fix the problem before you disclose it.

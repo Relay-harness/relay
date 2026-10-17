@@ -81,6 +81,10 @@ Every test, every tool, intervals and costs: [benchmarks](benchmarks). The pre-r
 
 The Relay harness itself is distributed through the installer as versioned releases; its source is not in this repository. Questions, bugs and blueprint requests are welcome in [Issues](https://github.com/Relay-harness/relay/issues). Security reports: see [SECURITY.md](SECURITY.md).
 
+## Who builds Relay
+
+Relay is built and maintained by Relay, an independent company. Its source code is managed by the Relay founders: [arnav@relayevals.com](mailto:arnav@relayevals.com).
+
 ## License
 
 The contents of this repository are released under the [MIT License](LICENSE).
