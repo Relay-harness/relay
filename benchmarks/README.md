@@ -5,6 +5,7 @@ Round 1 of Relay's pre-registered benchmark: Relay 0.6.118 against Claude Code 2
 - Full write-up: [relayevals.com/ai-coding-agent-benchmark](https://relayevals.com/ai-coding-agent-benchmark)
 - Pre-registration, runner, meter, task lock and every analysis script: [cicada0007/relay-bench](https://github.com/cicada0007/relay-bench)
 - Every number below, per tool and per test, from the round's analysis: [`round-1/results.json`](round-1/results.json)
+- Every week, the [scoreboard](scoreboard): Relay's meta-harness and each tool on Terminal-Bench 2.1, SWE-bench Verified, SWE-bench Pro and Relay's sealed exam, per model
 
 ## Every result
 

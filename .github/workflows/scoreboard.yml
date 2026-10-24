@@ -1,0 +1,26 @@
+name: scoreboard
+
+# benchmarks/scoreboard/README.md is rendered from scoreboard.json beside it, never edited by hand. On every change this
+# checks that the page is the file's rendering and that neither holds a word for a result: numbers only.
+
+on:
+  push:
+    branches: [main]
+    paths: ["benchmarks/scoreboard/**", ".github/workflows/scoreboard.yml"]
+  pull_request:
+    paths: ["benchmarks/scoreboard/**", ".github/workflows/scoreboard.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: The page is the rendering of scoreboard.json, numbers only
+        run: node benchmarks/scoreboard/render.mjs --check
