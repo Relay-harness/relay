@@ -1,0 +1,232 @@
+{
+  "scoreboard": 1,
+  "week": "2026-W43",
+  "generatedAt": "2026-10-24T01:49:34.518Z",
+  "repository": "https://github.com/cicada0007/relay-bench",
+  "commit": "36f67b5658592744fcd9bcbc626eaed16ffb0c93",
+  "preregistration": "https://github.com/cicada0007/relay-bench/blob/main/PREREGISTRATION.md",
+  "statistics": {
+    "unit": "The task. An entry's score on a task is its mean over that task's trials (the meta-harness: over that task's groups of attempts).",
+    "interval": "95% percentile bootstrap over tasks, 10000 resamples, seed 20261015.",
+    "difference": "The mean over the tasks both entries ran of (the first entry's score minus the second's), in points, with the same interval.",
+    "dropped": "A task where our infrastructure failed twice for any tool is dropped for every entry.",
+    "sameModel": "Every entry in a run uses the same model, tasks, limits and meter. Claude Code runs Anthropic models and Codex OpenAI models, so each is in the runs of its own provider's models."
+  },
+  "measures": {
+    "score": "Solved (Terminal-Bench), resolved (SWE-bench) or requirements met (the exam), percent.",
+    "allTrialsSolved": "The share of tasks where every trial succeeded, percent.",
+    "costUsd": "Metered model spend of every trial counted, in dollars.",
+    "costPerSolvedUsd": "Metered cost divided by the trials (or, for the meta-harness, the groups) that succeeded.",
+    "medianMinutes": "Median wall time of a trial; for the meta-harness, of its slowest attempt in a group plus the picker's measured time."
+  },
+  "metaHarness": {
+    "name": "Relay meta-harness",
+    "what": "Every single tool in a run works on the same task; the picker reads each attempt's actions and their output (or its change and the project's own checks) and keeps one. Its grade on a task is the grade of the attempt it kept.",
+    "picker": "gpt-6.1-sol, medium effort (meta/pick.mjs).",
+    "blind": "The picker never sees a grade, the hidden tests, any tool's words about its own work, or which tool made which attempt.",
+    "cost": "Every attempt in the group plus the picker. Where the picker was asked only about groups the grader split, its cost on the other groups is estimated from the asked calls' mean and shown apart.",
+    "groups": "A group is one task's attempts with the same trial number, one per tool. A group where an attempt kept no record of its actions is left out and counted."
+  },
+  "notInRegistry": [
+    {
+      "name": "Terminal-Bench 4.0",
+      "checked": "2026-10-24",
+      "harbor": "0.24.0",
+      "note": "The terminal-bench organisation publishes terminal-bench, terminal-bench-2 and terminal-bench-2-1 only. The 4.0 copies in the registry belong to a personal account (ryanmarten/terminal-bench-4-no-prebuild, tagged 4.0.0, and ryanmarten/tb4-preview), so the scoreboard does not run them."
+    }
+  ],
+  "benchmarks": [
+    {
+      "id": "terminal-bench-2-1",
+      "title": "Terminal-Bench 2.1",
+      "kind": "public",
+      "dataset": "terminal-bench/terminal-bench-2-1@sha256:7d7bdc1cbedad549fc1140404bd4dc45e5fd0ea7c4186773687d177ad3a0699a",
+      "datasetRevision": 6,
+      "harbor": "0.24.0",
+      "tasksInSet": 89,
+      "measure": "solved",
+      "runs": [
+        {
+          "test": "F",
+          "label": "Round 1, test F",
+          "model": "claude-haiku-5-5",
+          "modelName": "Claude Haiku 5.5",
+          "status": "complete",
+          "tasks": 87,
+          "trialsPerTask": 2,
+          "trialsNotMade": 0,
+          "droppedTasks": [
+            "terminal-bench/qemu-alpine-ssh",
+            "terminal-bench/qemu-startup"
+          ],
+          "firstTrial": "2026-10-16",
+          "lastTrial": "2026-10-17",
+          "entries": [
+            {
+              "id": "relay",
+              "name": "Relay 0.6.118",
+              "kind": "tool",
+              "tasks": 87,
+              "trials": 174,
+              "score": 71.83908045977012,
+              "low": 63.2183908045977,
+              "high": 80.45977011494253,
+              "allTrialsSolved": 65.51724137931035,
+              "costUsd": 4.000450165000001,
+              "costPerSolvedUsd": 0.032003601320000005,
+              "medianMinutes": 1.5670666666666666,
+              "unmeteredTrials": 0,
+              "stoppedAtCap": 0
+            },
+            {
+              "id": "claude-code",
+              "name": "Claude Code 2.1.300",
+              "kind": "tool",
+              "tasks": 87,
+              "trials": 174,
+              "score": 83.33333333333333,
+              "low": 76.4367816091954,
+              "high": 89.65517241379311,
+              "allTrialsSolved": 75.86206896551724,
+              "costUsd": 6.898719185000001,
+              "costPerSolvedUsd": 0.04757737368965518,
+              "medianMinutes": 1.4331166666666666,
+              "unmeteredTrials": 2,
+              "stoppedAtCap": 0
+            },
+            {
+              "id": "meta",
+              "name": "Relay meta-harness",
+              "kind": "meta",
+              "arms": [
+                "claude-code",
+                "relay"
+              ],
+              "picker": {
+                "model": "gpt-6.1-sol",
+                "effort": "medium"
+              },
+              "tasks": 87,
+              "groups": 174,
+              "groupsLeftOut": 0,
+              "groupsNotDecided": 0,
+              "score": 86.20689655172414,
+              "low": 79.3103448275862,
+              "high": 91.95402298850574,
+              "costUsd": 17.350269064285715,
+              "attemptsUsd": 10.899169350000001,
+              "pickerUsd": 1.5571620000000002,
+              "pickerEstimatedUsd": 4.893937714285715,
+              "groupsAsked": 42,
+              "groupsPickerEstimated": 132,
+              "costPerSolvedUsd": 0.11566846042857143,
+              "medianMinutes": 1.9894333333333334,
+              "splitGroups": 42,
+              "pickedTopGraded": 36,
+              "unanswered": 0,
+              "bestPossible": 89.65517241379311
+            }
+          ],
+          "differences": [
+            {
+              "of": "meta",
+              "minus": "relay",
+              "tasks": 87,
+              "points": 14.367816091954023,
+              "low": 7.471264367816092,
+              "high": 21.839080459770116
+            },
+            {
+              "of": "meta",
+              "minus": "claude-code",
+              "tasks": 87,
+              "points": 2.8735632183908044,
+              "low": -1.1494252873563218,
+              "high": 6.896551724137931
+            },
+            {
+              "of": "relay",
+              "minus": "claude-code",
+              "tasks": 87,
+              "points": -11.494252873563218,
+              "low": -19.54022988505747,
+              "high": -3.4482758620689653
+            }
+          ]
+        }
+      ],
+      "status": "complete"
+    },
+    {
+      "id": "swebench-verified",
+      "title": "SWE-bench Verified",
+      "kind": "public",
+      "dataset": "swe-bench/swe-bench-verified@sha256:b934b0cc3dc800fe945eaf9f1623329db97ee3133c706d20644524c7759fb341",
+      "datasetRevision": 2,
+      "harbor": "0.24.0",
+      "tasksInSet": 500,
+      "measure": "resolved",
+      "runs": [],
+      "status": "not run yet"
+    },
+    {
+      "id": "swebench-pro",
+      "title": "SWE-bench Pro",
+      "kind": "public",
+      "dataset": "scale-ai/swe-bench-pro@sha256:88411d32ff27e53a4c1a7e29f0c2aeba180c8e5d60f221cab5ed56325f33549d",
+      "datasetRevision": 2,
+      "harbor": "0.24.0",
+      "tasksInSet": 731,
+      "measure": "resolved",
+      "runs": [],
+      "status": "not run yet"
+    },
+    {
+      "id": "exam",
+      "title": "Relay's sealed exam",
+      "kind": "sealed",
+      "about": "Tasks drafted from public issues filed after the models' training cutoffs, kept in a private repository the agent that improves Relay never sees (TIERS.md). Counts and scores only: no task is named.",
+      "measure": "requirements met",
+      "runs": [],
+      "status": "not run yet"
+    }
+  ],
+  "history": [
+    {
+      "week": "2026-W43",
+      "benchmark": "terminal-bench-2-1",
+      "test": "F",
+      "model": "claude-haiku-5-5",
+      "entry": "relay",
+      "name": "Relay 0.6.118",
+      "score": 71.83908045977012,
+      "low": 63.2183908045977,
+      "high": 80.45977011494253,
+      "costPerSolvedUsd": 0.032003601320000005
+    },
+    {
+      "week": "2026-W43",
+      "benchmark": "terminal-bench-2-1",
+      "test": "F",
+      "model": "claude-haiku-5-5",
+      "entry": "claude-code",
+      "name": "Claude Code 2.1.300",
+      "score": 83.33333333333333,
+      "low": 76.4367816091954,
+      "high": 89.65517241379311,
+      "costPerSolvedUsd": 0.04757737368965518
+    },
+    {
+      "week": "2026-W43",
+      "benchmark": "terminal-bench-2-1",
+      "test": "F",
+      "model": "claude-haiku-5-5",
+      "entry": "meta",
+      "name": "Relay meta-harness",
+      "score": 86.20689655172414,
+      "low": 79.3103448275862,
+      "high": 91.95402298850574,
+      "costPerSolvedUsd": 0.11566846042857143
+    }
+  ]
+}

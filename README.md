@@ -69,7 +69,7 @@ Round 1, on the same model and the same tasks, graded by hidden judges. Requirem
 | ---: | ---: | ---: |
 | 90.5% | 98.6% | 92.6% |
 
-Every test, every tool, intervals and costs: [benchmarks](benchmarks). The pre-registration, runner and raw results: [cicada0007/relay-bench](https://github.com/cicada0007/relay-bench).
+Every test, every tool, intervals and costs: [benchmarks](benchmarks). Every week, Relay's meta-harness and each tool on public benchmarks and the sealed exam: [the scoreboard](benchmarks/scoreboard). The pre-registration, runner and raw results: [cicada0007/relay-bench](https://github.com/cicada0007/relay-bench).
 
 ## This repository
 
@@ -77,7 +77,7 @@ Every test, every tool, intervals and costs: [benchmarks](benchmarks). The pre-r
 | --- | --- |
 | [`install.sh`](install.sh) | The installer that `relayevals.com/install.sh` serves |
 | [`blueprints/`](blueprints) | Ready blueprints per stack |
-| [`benchmarks/`](benchmarks) | Benchmark results |
+| [`benchmarks/`](benchmarks) | Benchmark results and the weekly scoreboard |
 
 The Relay harness itself is distributed through the installer as versioned releases; its source is not in this repository. Questions, bugs and blueprint requests are welcome in [Issues](https://github.com/Relay-harness/relay/issues). Security reports: see [SECURITY.md](SECURITY.md).
 
