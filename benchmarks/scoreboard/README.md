@@ -4,7 +4,7 @@ Relay's meta-harness and each single tool on public benchmarks and on Relay's se
 
 - Every number below: [`scoreboard.json`](scoreboard.json), built by `scripts/scoreboard.mjs` in [cicada0007/relay-bench](https://github.com/cicada0007/relay-bench) at `36f67b5`.
 - The runners, the meter, the picker and one command per run: [the runbook](https://github.com/cicada0007/relay-bench/blob/main/RUNBOOK.md#the-scoreboard-every-week).
-- Round 1, with every test: [the benchmarks page](../README.md).
+- The newest results: [the benchmarks page](../README.md). Round 1, with every test: [round 1](../round-1).
 
 **Relay meta-harness.** Every single tool in a run works on the same task; the picker reads each attempt's actions and their output (or its change and the project's own checks) and keeps one. Its grade on a task is the grade of the attempt it kept. The picker never sees a grade, the hidden tests, any tool's words about its own work, or which tool made which attempt. Cost: every attempt in the group plus the picker. Where the picker was asked only about groups the grader split, its cost on the other groups is estimated from the asked calls' mean and shown apart.
 

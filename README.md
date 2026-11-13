@@ -63,13 +63,13 @@ relay blueprint verify
 
 ## Benchmarks
 
-Round 1, on the same model and the same tasks, graded by hidden judges. Requirements met on 12 long requests, Claude Sonnet 5.5:
+November 2026, on the same model and the same tasks, graded by hidden judges. Requirements met on 12 long requests, OpenAI gpt-6-luna, one run each:
 
 | Relay | Claude Code | Prime Agent |
 | ---: | ---: | ---: |
-| 90.5% | 98.6% | 92.6% |
+| 76.4% | 83.3% | 54.2% |
 
-Every test, every tool, intervals and costs: [benchmarks](benchmarks). Every week, Relay's meta-harness and each tool on public benchmarks and the sealed exam: [the scoreboard](benchmarks/scoreboard). The pre-registration, runner and raw results: [cicada0007/relay-bench](https://github.com/cicada0007/relay-bench).
+Every task, every tool, intervals and costs: [benchmarks](benchmarks). The earlier round, with every test: [round 1](benchmarks/round-1). Every week, Relay's meta-harness and each tool on public benchmarks and the sealed exam: [the scoreboard](benchmarks/scoreboard). The pre-registration, runner and raw results: [cicada0007/relay-bench](https://github.com/cicada0007/relay-bench).
 
 ## This repository
 

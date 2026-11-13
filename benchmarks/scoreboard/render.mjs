@@ -146,7 +146,7 @@ export function render(board) {
 		"",
 		`- Every number below: [\`scoreboard.json\`](scoreboard.json), built by \`scripts/scoreboard.mjs\` in [cicada0007/relay-bench](${repo})${board.commit ? ` at \`${board.commit.slice(0, 7)}\`` : ""}.`,
 		`- The runners, the meter, the picker and one command per run: [the runbook](${repo}/blob/main/RUNBOOK.md#the-scoreboard-every-week).`,
-		`- Round 1, with every test: [the benchmarks page](../README.md).`,
+		`- The newest results: [the benchmarks page](../README.md). Round 1, with every test: [round 1](../round-1).`,
 		"",
 		`**${board.metaHarness.name}.** ${board.metaHarness.what} ${board.metaHarness.blind} Cost: ${board.metaHarness.cost.charAt(0).toLowerCase()}${board.metaHarness.cost.slice(1)}`,
 		"",
