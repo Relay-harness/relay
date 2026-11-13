@@ -1,10 +1,9 @@
 # Benchmarks
 
-Round 1 of Relay's pre-registered benchmark: Relay 0.6.118 against Claude Code 2.1.300, Prime Agent 0.10.0 and Hermes 0.22.2, on the same model and the same tasks. Hidden judges outside each tool's repository graded every run. The tests and the measures were fixed before the first paid run.
+November 2026: Relay 0.6.128 (a local build with the fixes from this test) against Claude Code 2.1.300 and Prime Agent 0.10.2, on the same model (OpenAI gpt-6-luna) and the same 12 long requests, one run each. Hidden judges outside each tool's repository graded every run.
 
-- Full write-up: [relayevals.com/ai-coding-agent-benchmark](https://relayevals.com/ai-coding-agent-benchmark)
-- Pre-registration, runner, meter, task lock and every analysis script: [cicada0007/relay-bench](https://github.com/cicada0007/relay-bench)
-- Every number below, per tool and per test, from the round's analysis: [`round-1/results.json`](round-1/results.json)
+- The runner, the meter and the task set: [cicada0007/relay-bench](https://github.com/cicada0007/relay-bench)
+- The earlier round, with every test: [round 1, October 2026](round-1)
 - Every week, the [scoreboard](scoreboard): Relay's meta-harness and each tool on Terminal-Bench 2.1, SWE-bench Verified, SWE-bench Pro and Relay's sealed exam, per model
 
 ## Every result
@@ -13,73 +12,82 @@ Each test's own measure, per tool. A dash is a tool the test did not run.
 
 | Test | Model | Measure | Relay | Claude Code | Prime Agent | Hermes |
 | --- | --- | --- | ---: | ---: | ---: | ---: |
-| A · Long requests | Claude Sonnet 5.5 | requirements met | 90.5% | 98.6% | 92.6% | – |
-| B · Everyday changes | Claude Haiku 5.5 | solved | 91.7% | 100.0% | 100.0% | 100.0% |
-| B · Long requests | Claude Haiku 5.5 | requirements met | 73.6% | 93.1% | 58.3% | 90.3% |
-| D · Faults during a long request | Claude Haiku 5.5 | requirements met | 80.6% | 97.2% | 2.8% | 97.2% |
-| F · Terminal-Bench 2.1 | Claude Haiku 5.5 | solved | 71.8% | 83.3% | – | – |
-| G · OOLONG (yahoo, 128k) | Claude Haiku 5.5 | solved | 10.0% | 2.0% | 6.0% | – |
-| G · LongBench v2 | Claude Haiku 5.5 | solved | 60.0% | 60.0% | 58.0% | – |
+| Long requests, all 12 | GPT-6 Luna | requirements met | 76.4% | 83.3% | 54.2% | – |
+| Long requests, all 12 | GPT-6 Luna | solved (all 6 met) | 25.0% | 41.7% | 8.3% | – |
+| Long requests, all 12 | GPT-6 Luna | judge checks passed | 94.6% | 97.0% | 89.5% | – |
+| Long requests, 6 in Node | GPT-6 Luna | requirements met | 80.6% | 88.9% | 69.4% | – |
+| Long requests, 6 in Python | GPT-6 Luna | requirements met | 72.2% | 77.8% | 38.9% | – |
+
+The same results as counts:
+
+| Measure | Relay | Claude Code | Prime Agent |
+| --- | ---: | ---: | ---: |
+| Requirements met, of 72 | 55 | 60 | 39 |
+| Requirements met | 76.4% | 83.3% | 54.2% |
+| Judge checks passed, of 820 | 776 | 795 | 734 |
+| Judge checks passed | 94.6% | 97.0% | 89.5% |
+| Tasks with all 6 requirements met | 3 | 5 | 1 |
+| Model spend | $13.45 | $5.98 | $9.02 |
+| Total time | 12.7 h | 6.1 h | 7.3 h |
+
+## Every task
+
+Requirements met, of 6.
+
+| Task | Relay | Claude Code | Prime Agent |
+| --- | ---: | ---: | ---: |
+| node-build-runner | 5 | 6 | 5 |
+| node-http-framework | 6 | 6 | 6 |
+| node-kv-store | 6 | 5 | 3 |
+| node-package-resolver | 4 | 6 | 4 |
+| node-spreadsheet | 6 | 6 | 5 |
+| node-template-engine | 2 | 3 | 2 |
+| py-calendar | 4 | 5 | 2 |
+| py-dataframe | 5 | 6 | 4 |
+| py-issue-tracker | 4 | 5 | 1 |
+| py-mini-sql | 5 | 4 | 5 |
+| py-text-adventure | 4 | 3 | 1 |
+| py-vcs-lite | 4 | 5 | 1 |
 
 ## Relay minus each tool
 
-The mean over tasks of Relay's score minus the other tool's, in points, with a bootstrap 95% interval over tasks (10,000 resamples, seed 20261015). Test D has one task, so it has no interval.
+The mean over tasks of Relay's requirement share minus the other tool's, in points, with a bootstrap 95% interval over tasks (10,000 resamples, seed 20261015).
 
-| Test | Relay minus | Points | 95% interval | Tasks or items |
-| --- | --- | ---: | --- | ---: |
-| A · Long requests | Claude Code | −8.1 | −16.0 to −1.4 | 12 |
-| A · Long requests | Prime Agent | −2.1 | −11.3 to 6.9 | 12 |
-| B · Everyday changes | Claude Code | −8.3 | −19.4 to 0.0 | 12 |
-| B · Everyday changes | Prime Agent | −8.3 | −19.4 to 0.0 | 12 |
-| B · Everyday changes | Hermes | −8.3 | −19.4 to 0.0 | 12 |
-| B · Long requests | Claude Code | −19.4 | −38.9 to −2.8 | 12 |
-| B · Long requests | Prime Agent | +15.3 | −11.1 to 37.5 | 12 |
-| B · Long requests | Hermes | −16.7 | −36.1 to −1.4 | 12 |
-| F · Terminal-Bench 2.1 | Claude Code | −11.5 | −19.5 to −3.4 | 87 |
-| G · OOLONG (yahoo, 128k) | Claude Code | +8.0 | 0.0 to 18.0 | 50 |
-| G · OOLONG (yahoo, 128k) | Prime Agent | +4.0 | −8.0 to 16.0 | 50 |
-| G · LongBench v2 | Claude Code | 0.0 | −10.0 to 10.0 | 50 |
-| G · LongBench v2 | Prime Agent | +2.0 | −4.0 to 10.0 | 50 |
+| Relay minus | Points | 95% interval | Tasks |
+| --- | ---: | --- | ---: |
+| Claude Code | −6.9 | −15.3 to 2.8 | 12 |
+| Prime Agent | +22.2 | 9.7 to 34.7 | 12 |
 
-## Faults (test D)
+## Cost and time per task
 
-One long request, 2 runs per fault and tool. 120 seconds after the first model request, the tool is killed once, or every model connection is dropped for 10 minutes, or every model request gets an overloaded error for 10 minutes. Every tool runs in the same restart loop, which calls the tool's own resume command up to 3 times.
-
-| Finished with nobody acting | Killed | Network cut | Model errors |
+| Task | Relay | Claude Code | Prime Agent |
 | --- | ---: | ---: | ---: |
-| Relay | 1 of 2 | 1 of 2 | 2 of 2 |
-| Claude Code | 2 of 2 | 2 of 2 | 1 of 2 |
-| Prime Agent | 0 of 2 | 0 of 2 | 0 of 2 |
-| Hermes | 2 of 2 | 1 of 2 | 2 of 2 |
-
-## Cost per solved task
-
-Metered model spend divided by the runs that succeeded.
-
-| Test | Relay | Claude Code | Prime Agent | Hermes |
-| --- | ---: | ---: | ---: | ---: |
-| A · Long requests | $2.613 | $2.210 | $2.379 | – |
-| B · Everyday changes | $0.045 | $0.034 | $0.032 | $0.036 |
-| B · Long requests | $1.239 | $2.483 | $4.501 | $2.385 |
-| D · Faults during a long request | $0.643 | $1.203 | – | $1.388 |
-| F · Terminal-Bench 2.1 | $0.032 | $0.048 | – | – |
-| G · OOLONG (yahoo, 128k) | $0.038 | $0.091 | $0.051 | – |
-| G · LongBench v2 | $0.012 | $0.008 | $0.016 | – |
+| node-build-runner | $0.793 · 57 min | $0.300 · 30 min | $0.443 · 66 min |
+| node-http-framework | $1.080 · 66 min | $0.339 · 28 min | $0.311 · 27 min |
+| node-kv-store | $1.153 · 70 min | $0.312 · 27 min | $0.076 · 6 min |
+| node-package-resolver | $1.299 · 74 min | $0.303 · 23 min | $0.366 · 19 min |
+| node-spreadsheet | $1.197 · 76 min | $0.212 · 16 min | $0.151 · 12 min |
+| node-template-engine | $1.392 · 77 min | $0.476 · 29 min | $1.697 · 32 min |
+| py-calendar | $1.218 · 54 min | $0.898 · 37 min | $0.890 · 26 min |
+| py-dataframe | $0.913 · 55 min | $0.365 · 14 min | $0.327 · 18 min |
+| py-issue-tracker | $0.829 · 42 min | $0.580 · 41 min | $0.924 · 83 min |
+| py-mini-sql | $0.916 · 62 min | $0.755 · 47 min | $1.076 · 27 min |
+| py-text-adventure | $1.578 · 71 min | $0.871 · 44 min | $1.749 · 75 min |
+| py-vcs-lite | $1.087 · 58 min | $0.567 · 31 min | $1.011 · 48 min |
 
 | | Relay | Claude Code | Prime Agent |
 | --- | ---: | ---: | ---: |
-| Said done but failed (test A) | 26.5% | 5.9% | 23.5% |
+| Spend per requirement met | $0.245 | $0.100 | $0.231 |
+| Spend per task with all 6 met | $4.485 | $1.195 | $9.022 |
+| Said done | 8 of 12 | 12 of 12 | 11 of 12 |
+| Said done but failed | 7 of 8 | 7 of 12 | 10 of 11 |
 
 ## How it ran
 
-- **Tests.** A: 12 long requests of about 6 parts each, 3 runs per tool. B: 12 everyday changes, 3 runs each, and test A's long requests once each. D: one long request under three faults. F: Terminal-Bench 2.1, all 89 public tasks, 2 trials each, through Harbor 0.24.0. G: OOLONG and LongBench v2, scored by their own published scorers.
-- **Same model, one meter.** Every model tier of every tool was set to the test model. All model traffic went through one meter inside each sandbox, which counted every token, so cost means the same for every tool.
-- **Grading.** Each run was graded by a judge the tool never saw, on a clean copy of its result.
-- **Stops and drops.** Test A stopped at its $190 cap after 102 of 108 runs; the runs not made are the same for every tool. In test F, qemu-alpine-ssh and qemu-startup were dropped for both tools after our infrastructure failed twice.
-- **Reward hacking.** Every counted run was read for edited or skipped tests, hard-coded answers and access to the judge or the meter. None was found ([the check](https://github.com/cicada0007/relay-bench/blob/main/results/reward-hacking-round-1.md)).
-- **Official numbers.** No same-model official numbers exist for these tools on Terminal-Bench 2.1, OOLONG or LongBench v2 ([what was checked](https://github.com/cicada0007/relay-bench/blob/main/results/official-numbers-round-1.md)).
-- **Spend.** At most $317.42 of a $400 budget, pilot included.
-
-## Reproduce it
-
-The runbook in [relay-bench](https://github.com/cicada0007/relay-bench/blob/main/RUNBOOK.md) has one command per test. Each needs Node 22, an Anthropic API key and an E2B key in the environment.
+- **Tasks.** 12 long requests of 6 numbered parts each, from the relay-bench task set: 6 in Node, 6 in Python. One run per tool per task.
+- **Same model, one meter.** Every tool ran gpt-6-luna through the OpenAI Responses API. All model traffic went through one meter inside each E2B sandbox, which counted every token, so spend means the same for every tool.
+- **Limits.** 180 minutes per run. Spend cap per run: $6 for Relay, $2 for the others.
+- **Grading.** Each run was graded by a judge the tool never saw, on a clean copy of its result. A requirement is met when all of its checks pass.
+- **Refused planning calls.** OpenAI rejected Relay's planning request as "flagged as potentially violating" in 7 runs, and one Prime Agent run stopped at the start in the same way. Each of these spent less than $0.01. They were set aside and run again, under a rule set before the re-runs. Probes showed the same request was flagged at random, more often when several were sent at once. A Relay build that resends a flagged planning request unchanged ran the last two tasks (node-spreadsheet and py-dataframe). No request was flagged in those runs.
+- **Counted run.** py-text-adventure has two completed Relay runs, at 4 and 5 requirements met. The first is counted. Counting the second instead gives Relay 56 of 72, $13.09, 12.5 h, and −5.6 points (−15.3 to 5.6) against Claude Code.
+- **Spend.** About $58 of model spend across the pilot, set-aside runs and re-runs, under a $120 cap.
