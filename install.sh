@@ -1788,9 +1788,17 @@ relay_install_binary() {
 		return 1
 	fi
 	chmod 755 "$relay_ib_stage/relay/$relay_cmd"
-	if ! relay_ib_smoke=$("$relay_ib_stage/relay/$relay_cmd" --version 2>&1 </dev/null); then
+	relay_ib_smoke=$("$relay_ib_stage/relay/$relay_cmd" --version 2>&1 </dev/null) && relay_ib_status=0 || relay_ib_status=$?
+	if [ "$relay_ib_status" -ne 0 ]; then
 		rm -rf "${relay_ib_stage:?}"
-		printf '%s\n' "$relay_ib_smoke" | tail -n 6
+		if [ -n "$relay_ib_smoke" ]; then
+			printf '%s\n' "$relay_ib_smoke" | tail -n 6
+		elif [ "$relay_ib_status" -eq 137 ] && [ "$(relay_os_name)" = Darwin ]; then
+			# 0.6.132 on macOS 27: the kernel kills a binary whose signature it does not accept, before it prints anything.
+			printf 'macOS stopped it before it started: it did not accept the build'"'"'s signature\n'
+		else
+			printf 'it stopped (exit %s) before printing anything\n' "$relay_ib_status"
+		fi
 		return 1
 	fi
 	relay_ib_previous=
