@@ -1530,9 +1530,9 @@ relay_block_draw() {
 		relay_block_notes
 		relay_emit ""
 		if [ "$relay_bd_form" = now ]; then
-			relay_emit "Set up now? $(relay_d "About 2 minutes: sign in, connect claude and codex, pick a repo.")  ${relay_c_ok}✓${relay_c_reset} 1. Set up now"
+			relay_emit "Set up now? $(relay_d "About 2 min: sign in, Relay's models or claude/codex, pick a repo.")  ${relay_c_ok}✓${relay_c_reset} 1. Set up now"
 		else
-			relay_emit "Set up now? $(relay_d "About 2 minutes: sign in, connect claude and codex, pick a repo.")  ${relay_c_ok}✓${relay_c_reset} 2. Later — run $relay_cmd any time"
+			relay_emit "Set up now? $(relay_d "About 2 min: sign in, Relay's models or claude/codex, pick a repo.")  ${relay_c_ok}✓${relay_c_reset} 2. Later — run $relay_cmd any time"
 		fi
 		return 0
 		;;
@@ -1578,7 +1578,7 @@ relay_block_notes() {
 # The question (O02): a green box 98 columns wide with the two choices, the keys under it, and on the right where the
 # answer is read from. A terminal narrower than the box gets the same rows without it.
 relay_question_rows() {
-	relay_qr_q="${relay_c_ask}?${relay_c_reset} ${relay_c_bold}${relay_c_white}Set up now?${relay_c_reset} $(relay_d "About 2 minutes: sign in, connect claude and codex, pick a repo.")"
+	relay_qr_q="${relay_c_ask}?${relay_c_reset} ${relay_c_bold}${relay_c_white}Set up now?${relay_c_reset} $(relay_d "About 2 min: sign in, Relay's models or claude/codex, pick a repo.")"
 	if [ "$relay_as_sel" = 1 ]; then
 		relay_qr_1="${relay_c_ok}❯ 1. Set up now${relay_c_reset}                    $(relay_d "continues right here · step 1 of 4 · about 2 min")"
 		relay_qr_2="  2. Later — run $relay_cmd any time   $(relay_d "nothing else changes; $relay_cmd starts setup when you run it")"
@@ -1703,7 +1703,34 @@ relay_ask_setup() {
 	printf '%s' "$relay_show_cursor"
 }
 
-# Hands this terminal to relay's first run: the installed command, its input from /dev/tty, one blank row between.
+# The device relay's first run reads its keys from: this terminal's own device (/dev/ttys003), never the /dev/tty
+# alias when the device can be named. On macOS the native build cannot wait on /dev/tty (kqueue does not support it),
+# so a relay started on it never read a key, and "Set up now" left a sign-in screen that ignored every key, Ctrl+C
+# included (0.6.132 and 0.6.133, found 20 Nov 2026). Under curl | bash, stderr and stdout are still the terminal;
+# failing those, ps names this shell's terminal. /dev/tty is the last resort, and is fine on Linux.
+relay_setup_input() {
+	if [ -n "${RELAY_INSTALLER_TTY:-}" ]; then
+		printf '%s' "$RELAY_INSTALLER_TTY"
+		return 0
+	fi
+	relay_si_dev=$(tty <&2 2>/dev/null) || relay_si_dev=$(tty <&1 2>/dev/null) || relay_si_dev=
+	if [ -z "$relay_si_dev" ] || [ "$relay_si_dev" = /dev/tty ]; then
+		relay_si_name=$(ps -o tty= -p $$ 2>/dev/null | tr -d '[:space:]')
+		case "$relay_si_name" in
+			"" | "?" | "??") relay_si_dev= ;;
+			/dev/*) relay_si_dev=$relay_si_name ;;
+			*) relay_si_dev=/dev/$relay_si_name ;;
+		esac
+	fi
+	if [ -n "$relay_si_dev" ] && [ -c "$relay_si_dev" ] && ( : <"$relay_si_dev" ) 2>/dev/null; then
+		printf '%s' "$relay_si_dev"
+	else
+		printf '%s' /dev/tty
+	fi
+}
+
+# Hands this terminal to relay's first run: the installed command, its input from this terminal's own device (above),
+# one blank row between.
 relay_start_setup() {
 	[ "$relay_setup_answer" = now ] || return 0
 	PATH="$(dirname "$relay_installed_bin"):$PATH"
@@ -1712,7 +1739,8 @@ relay_start_setup() {
 	relay_count_sent=1
 	trap - EXIT INT TERM
 	printf '\n'
-	exec "$relay_installed_bin" <"${RELAY_INSTALLER_TTY:-/dev/tty}"
+	relay_ss_input=$(relay_setup_input)
+	exec "$relay_installed_bin" <"$relay_ss_input"
 }
 
 # ── The native binary (I2, decision 8) ──
