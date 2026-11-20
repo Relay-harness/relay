@@ -1703,7 +1703,34 @@ relay_ask_setup() {
 	printf '%s' "$relay_show_cursor"
 }
 
-# Hands this terminal to relay's first run: the installed command, its input from /dev/tty, one blank row between.
+# The device relay's first run reads its keys from: this terminal's own device (/dev/ttys003), never the /dev/tty
+# alias when the device can be named. On macOS the native build cannot wait on /dev/tty (kqueue does not support it),
+# so a relay started on it never read a key, and "Set up now" left a sign-in screen that ignored every key, Ctrl+C
+# included (0.6.132 and 0.6.133, found 20 Nov 2026). Under curl | bash, stderr and stdout are still the terminal;
+# failing those, ps names this shell's terminal. /dev/tty is the last resort, and is fine on Linux.
+relay_setup_input() {
+	if [ -n "${RELAY_INSTALLER_TTY:-}" ]; then
+		printf '%s' "$RELAY_INSTALLER_TTY"
+		return 0
+	fi
+	relay_si_dev=$(tty <&2 2>/dev/null) || relay_si_dev=$(tty <&1 2>/dev/null) || relay_si_dev=
+	if [ -z "$relay_si_dev" ] || [ "$relay_si_dev" = /dev/tty ]; then
+		relay_si_name=$(ps -o tty= -p $$ 2>/dev/null | tr -d '[:space:]')
+		case "$relay_si_name" in
+			"" | "?" | "??") relay_si_dev= ;;
+			/dev/*) relay_si_dev=$relay_si_name ;;
+			*) relay_si_dev=/dev/$relay_si_name ;;
+		esac
+	fi
+	if [ -n "$relay_si_dev" ] && [ -c "$relay_si_dev" ] && ( : <"$relay_si_dev" ) 2>/dev/null; then
+		printf '%s' "$relay_si_dev"
+	else
+		printf '%s' /dev/tty
+	fi
+}
+
+# Hands this terminal to relay's first run: the installed command, its input from this terminal's own device (above),
+# one blank row between.
 relay_start_setup() {
 	[ "$relay_setup_answer" = now ] || return 0
 	PATH="$(dirname "$relay_installed_bin"):$PATH"
@@ -1712,7 +1739,8 @@ relay_start_setup() {
 	relay_count_sent=1
 	trap - EXIT INT TERM
 	printf '\n'
-	exec "$relay_installed_bin" <"${RELAY_INSTALLER_TTY:-/dev/tty}"
+	relay_ss_input=$(relay_setup_input)
+	exec "$relay_installed_bin" <"$relay_ss_input"
 }
 
 # ── The native binary (I2, decision 8) ──
