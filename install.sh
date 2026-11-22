@@ -531,8 +531,9 @@ relay_count_flush_marker() {
 # five steps (check this machine, download, verify, install, PATH), each pending ○, running (a spinner, and for the
 # download a bar with %, MB/s and seconds left) or done ✓. The capsule's arrows move only while work runs, at 10 frames
 # a second; under reduced motion the arrows stay still and the spinner is a static ●, while the numbers still count.
-# When the work is done the block collapses to a summary, and in a terminal the installer asks "Set up now?" on
-# /dev/tty, which works under curl | bash. Not a terminal, or CI: plain "relay-install:" lines, no colour, no prompts.
+# When the work is done the block collapses to a summary, and in a terminal relay starts right under it, reading keys
+# from the terminal, which works under curl | bash: it sets itself up after one sign-in in the browser (23 Nov 2026, no
+# "Set up now?" any more). Not a terminal, or CI: plain "relay-install:" lines, no colour, no prompts.
 # A step that fails says what happened, whose it is and what to do next (O10), and the network steps try 3 times.
 # Nothing is sent to Relay during install (decision 6): what the old count said is left for Relay to send later.
 
@@ -981,9 +982,8 @@ relay_live_clear() {
 	relay_live_rows=0
 }
 
-# The window title's static count (Foundations §5): "1 working" while the steps run, "1 needs you" while "Set up now?"
-# waits, and nothing once it is answered or the install stops. The terminal adds its own "~ — zsh — 139×42" after it
-# (O01, O02). Never animated; only in a terminal.
+# The window title's static count (Foundations §5): "1 working" while the steps run, and nothing once they are done or
+# the install stops. The terminal adds its own "~ — zsh — 139×42" after it (O01). Never animated; only in a terminal.
 relay_title_now=
 relay_title() {
 	[ "$relay_live" = 1 ] || return 0
@@ -1470,14 +1470,12 @@ relay_path_step() {
 	relay_path_paren="(1 line)"
 }
 
-# ── The summary the block collapses to (O01), the question under it (O02), and the answer (O03) ──
+# ── The summary the block collapses to (O01), and what comes next (O03) ──
 # One block under the command, drawn in place: relay_block_draw takes away the rows it drew last and draws a form.
 #   done      O01: the arrow line, "✓ relay 0.6.122 installed in 4.2s", where it went, the PATH line, the script link
-#   asked     O02: the same with "· no sudo" and whether this terminal finds relay, then the boxed "Set up now?"
-#   now|later O03: the summary flush left, then the question with its answer on one line; the blank row under the
-#             command goes too, so first run starts right below
+#   now|later O03: the summary flush left, then one line: relay starting here, or how to start it; the blank row under
+#             the command goes too, so first run starts right below
 relay_block_rows=0
-relay_as_sel=1
 
 # Prints one line of the block and counts the rows it takes.
 relay_emit() {
@@ -1493,7 +1491,7 @@ relay_sig_marks() {
 }
 
 # Whether this terminal finds relay (O02). The PATH line reaches new shells only: a shell already open (the one that ran
-# curl | bash) keeps its old PATH, so where it would not find relay the line says how to make it (K25). Setting up now
+# curl | bash) keeps its old PATH, so where it would not find relay the line says how to make it (K25). The installer
 # starts relay by its full path, so it works either way.
 relay_this_terminal_line() {
 	if relay_on_current_path; then
@@ -1501,13 +1499,6 @@ relay_this_terminal_line() {
 	else
 		printf 'new terminals will find %s; in this one, run exec $SHELL first' "$relay_cmd"
 	fi
-}
-
-# A row of the "Set up now?" box: "│" + the content padded to the box's inside + "│", the borders green.
-relay_box_row() {
-	relay_br_pad=$((relay_box_inner - $(relay_width "$1")))
-	[ "$relay_br_pad" -lt 0 ] && relay_br_pad=0
-	relay_emit "${relay_c_ok}│${relay_c_reset}$1$(printf '%*s' "$relay_br_pad" '')${relay_c_ok}│${relay_c_reset}"
 }
 
 relay_block_draw() {
@@ -1530,30 +1521,20 @@ relay_block_draw() {
 		relay_block_notes
 		relay_emit ""
 		if [ "$relay_bd_form" = now ]; then
-			relay_emit "Set up now? $(relay_d "About 2 min: sign in, Relay's models or claude/codex, pick a repo.")  ${relay_c_ok}✓${relay_c_reset} 1. Set up now"
+			relay_emit "${relay_c_ok}→${relay_c_reset} Starting $relay_cmd $(relay_d "· approve the sign-in in your browser; it sets up the rest")"
 		else
-			relay_emit "Set up now? $(relay_d "About 2 min: sign in, Relay's models or claude/codex, pick a repo.")  ${relay_c_ok}✓${relay_c_reset} 2. Later — run $relay_cmd any time"
+			relay_emit "${relay_c_ok}→${relay_c_reset} Run $relay_cmd to start $(relay_d "· approve the sign-in in your browser; it sets up the rest")"
 		fi
 		return 0
 		;;
 	esac
 	relay_emit "  ${relay_c_faint}· · · · · · · · · · · · ·${relay_c_reset} ${relay_c_accent}→${relay_c_reset}  ${relay_c_brand}Relay${relay_c_reset} $(relay_d "$version")"
 	relay_emit "  ${relay_c_ok}✓${relay_c_reset} ${relay_c_bold}${relay_c_white}relay $version installed${relay_c_reset} $(relay_d "in $relay_done_elapsed")"
-	if [ "$relay_bd_form" = asked ]; then
-		relay_emit "    ${relay_c_white}$relay_bd_where${relay_c_reset} $(relay_d "· $relay_bd_sha")$(relay_sig_marks) $(relay_d "· no sudo")"
-	else
-		relay_emit "    ${relay_c_white}$relay_bd_where${relay_c_reset} $(relay_d "· $relay_bd_sha")$(relay_sig_marks)"
-	fi
+	relay_emit "    ${relay_c_white}$relay_bd_where${relay_c_reset} $(relay_d "· $relay_bd_sha")$(relay_sig_marks)"
 	relay_emit "    $relay_path_head${relay_path_paren:+ $(relay_d "$relay_path_paren")} $(relay_d "· uninstall:") $relay_cmd uninstall"
-	if [ "$relay_bd_form" = asked ]; then
-		relay_emit "    $(relay_d "$(relay_this_terminal_line)")"
-	fi
 	relay_block_notes
 	relay_emit ""
 	relay_emit "  $(relay_d "read what this script does: $relay_script_url · nothing is sent to Relay during install")"
-	[ "$relay_bd_form" = asked ] || return 0
-	relay_emit ""
-	relay_question_rows
 }
 
 # Warnings and notes from the install (a signature that could not be checked, another relay first on PATH), dim, under
@@ -1572,47 +1553,6 @@ relay_block_notes() {
 			[ "$relay_bn_line" = "$relay_bn_rest" ] && relay_bn_rest=
 			[ -n "$relay_bn_line" ] && relay_emit "    $(relay_d "$relay_bn_line")"
 		done
-	fi
-}
-
-# The question (O02): a green box 98 columns wide with the two choices, the keys under it, and on the right where the
-# answer is read from. A terminal narrower than the box gets the same rows without it.
-relay_question_rows() {
-	relay_qr_q="${relay_c_ask}?${relay_c_reset} ${relay_c_bold}${relay_c_white}Set up now?${relay_c_reset} $(relay_d "About 2 min: sign in, Relay's models or claude/codex, pick a repo.")"
-	if [ "$relay_as_sel" = 1 ]; then
-		relay_qr_1="${relay_c_ok}❯ 1. Set up now${relay_c_reset}                    $(relay_d "continues right here · step 1 of 4 · about 2 min")"
-		relay_qr_2="  2. Later — run $relay_cmd any time   $(relay_d "nothing else changes; $relay_cmd starts setup when you run it")"
-	else
-		relay_qr_1="  1. Set up now                    $(relay_d "continues right here · step 1 of 4 · about 2 min")"
-		relay_qr_2="${relay_c_ok}❯ 2. Later — run $relay_cmd any time${relay_c_reset}   $(relay_d "nothing else changes; $relay_cmd starts setup when you run it")"
-	fi
-	relay_qr_keys="enter continue · esc back · s skip · ctrl+c quit (nothing half-done is kept)"
-	relay_qr_tty="answer read from /dev/tty · works under curl | bash"
-	if [ "${relay_screen_cols:-80}" -ge 98 ]; then
-		relay_box_inner=96
-		relay_emit "${relay_c_ok}╭$(printf '%96s' '' | sed 's/ /─/g')╮${relay_c_reset}"
-		relay_box_row " $relay_qr_q"
-		relay_box_row ""
-		relay_box_row " $relay_qr_1"
-		relay_box_row " $relay_qr_2"
-		relay_emit "${relay_c_ok}╰$(printf '%96s' '' | sed 's/ /─/g')╯${relay_c_reset}"
-	else
-		relay_emit "$relay_qr_q"
-		relay_emit ""
-		if [ "$relay_as_sel" = 1 ]; then
-			relay_emit "${relay_c_ok}❯ 1. Set up now${relay_c_reset}"
-			relay_emit "  2. Later — run $relay_cmd any time"
-		else
-			relay_emit "  1. Set up now"
-			relay_emit "${relay_c_ok}❯ 2. Later — run $relay_cmd any time${relay_c_reset}"
-		fi
-		relay_emit ""
-	fi
-	relay_qr_gap=$((${relay_screen_cols:-80} - $(relay_width "$relay_qr_keys") - $(relay_width "$relay_qr_tty")))
-	if [ "$relay_qr_gap" -ge 2 ]; then
-		relay_emit "$(relay_d "$relay_qr_keys$(printf '%*s' "$relay_qr_gap" '')$relay_qr_tty")"
-	else
-		relay_emit "$(relay_d "$relay_qr_keys")"
 	fi
 }
 
@@ -1650,9 +1590,9 @@ relay_on_current_path() {
 	[ "$relay_cp_found" -ef "$relay_installed_bin" ]
 }
 
-# ── O02: "Set up now?", read from /dev/tty so it works under curl | bash ──
-# One key: 1 or enter on the first row sets up now, in this terminal; 2, s or esc leaves it for later. ↑↓ move.
-# RELAY_INSTALL_SETUP=now or later answers it without asking; CI and a terminal-less run never ask.
+# ── O02: no question (23 Nov 2026). In a terminal, relay starts right here and sets itself up after one sign-in in the
+# browser; RELAY_INSTALL_SETUP=later leaves it for later (and =now starts it without a check). CI and a terminal-less run
+# never start it.
 relay_ask_setup() {
 	relay_as_tty="${RELAY_INSTALLER_TTY:-/dev/tty}"
 	case "$(printf '%s' "${RELAY_INSTALL_SETUP:-}" | tr '[:upper:]' '[:lower:]')" in
@@ -1662,50 +1602,15 @@ relay_ask_setup() {
 	relay_setup_answer=later
 	[ "$relay_live" = 1 ] || return 0
 	( : <>"$relay_as_tty" ) 2>/dev/null || return 0
-	relay_as_sel=1
-	relay_as_saved=$(stty -g <"$relay_as_tty" 2>/dev/null || :)
-	stty -icanon -echo min 1 time 0 <"$relay_as_tty" 2>/dev/null || :
-	printf '%s' "$relay_hide_cursor"
-	relay_title "1 needs you"
-	# O01's summary stays up a moment, then O02 adds what it knows and asks.
+	relay_setup_answer=now
+	# O01's summary stays up a moment, then gives way to relay.
 	sleep "$relay_hold"
-	while :; do
-		relay_block_draw asked
-		relay_as_key=$(dd bs=1 count=1 <"$relay_as_tty" 2>/dev/null || :)
-		case "$relay_as_key" in
-			"$relay_esc")
-				stty min 0 time 1 <"$relay_as_tty" 2>/dev/null || :
-				relay_as_rest=$(dd bs=1 count=2 <"$relay_as_tty" 2>/dev/null || :)
-				stty min 1 time 0 <"$relay_as_tty" 2>/dev/null || :
-				case "$relay_as_rest" in
-					"[A") relay_as_sel=1 ;;
-					"[B") relay_as_sel=2 ;;
-					# Esc on its own (or a key this question has no use for): back out, later.
-					*) relay_setup_answer=later; break ;;
-				esac
-				;;
-			1) relay_setup_answer=now; break ;;
-			2|s|S|q) relay_setup_answer=later; break ;;
-			k) relay_as_sel=1 ;;
-			j) relay_as_sel=2 ;;
-			""|"$(printf '\r')"|"$(printf '\n')")
-				if [ "$relay_as_sel" = 1 ]; then relay_setup_answer=now; else relay_setup_answer=later; fi
-				break
-				;;
-			"$(printf '\003')") relay_setup_answer=later; break ;;
-		esac
-	done
-	if [ -n "$relay_as_saved" ]; then
-		stty "$relay_as_saved" <"$relay_as_tty" 2>/dev/null || :
-	fi
-	relay_title ""
-	relay_block_draw "$relay_setup_answer"
-	printf '%s' "$relay_show_cursor"
+	relay_block_draw now
 }
 
 # The device relay's first run reads its keys from: this terminal's own device (/dev/ttys003), never the /dev/tty
 # alias when the device can be named. On macOS the native build cannot wait on /dev/tty (kqueue does not support it),
-# so a relay started on it never read a key, and "Set up now" left a sign-in screen that ignored every key, Ctrl+C
+# so a relay started on it never read a key, and setting up left a sign-in screen that ignored every key, Ctrl+C
 # included (0.6.132 and 0.6.133, found 20 Nov 2026). Under curl | bash, stderr and stdout are still the terminal;
 # failing those, ps names this shell's terminal. /dev/tty is the last resort, and is fine on Linux.
 relay_setup_input() {
@@ -1979,7 +1884,7 @@ relay_binary_step() {
 	return 0
 }
 
-# The whole inline install: five steps, the summary, then "Set up now?".
+# The whole inline install: five steps, the summary, then relay, which sets itself up after one sign-in.
 relay_main_inline() {
 	relay_install_started_ds=$(relay_now_ds)
 	relay_ui_init
@@ -2325,10 +2230,6 @@ relay_step_fail() {
 
 relay_restore_terminal() {
 	relay_step_break
-	if [ -n "${relay_as_saved:-}" ]; then
-		stty "$relay_as_saved" <"${RELAY_INSTALLER_TTY:-/dev/tty}" 2>/dev/null || :
-		relay_as_saved=
-	fi
 	if [ "${relay_live:-0}" = 1 ]; then
 		printf '%s[?7h%s%s' "$relay_esc" "$relay_show_cursor" "$relay_reset"
 		[ -z "${relay_title_now:-}" ] || relay_title ""
