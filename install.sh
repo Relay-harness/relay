@@ -313,10 +313,8 @@ relay_npm_bin_dir() {
 	printf '%s/bin' "$npm_bin_prefix"
 }
 
-# The last thing a working install prints: a welcome, and what to do next. Only a
-# model connection is needed, and running the command walks through it; the Relay
-# account is optional, and `login` is the terminal's way to it. The two are named
-# apart, because both are called signing in.
+# The last thing a working install prints: a welcome, and what to do next. Relay
+# asks the person to sign in (free) when it first starts, and sets up the rest.
 print_relay_welcome() {
 	if relay_quiet; then
 		# The last line says it: "✓ Relay <version> installed · 41 s · run: relay".
@@ -337,9 +335,7 @@ print_relay_welcome() {
 	relay_welcome_width=$((${#relay_cmd} + 6))
 	printf '\nNext\n'
 	printf '  cd your-project\n'
-	printf '  %-*s  %s\n' "$relay_welcome_width" "$relay_cmd" "connect a model and start coding"
-	printf '\nOptional\n'
-	printf '  %-*s  %s\n' "$relay_welcome_width" "$relay_cmd login" "sign this machine in to your Relay account"
+	printf '  %-*s  %s\n' "$relay_welcome_width" "$relay_cmd" "start Relay; it asks you to sign in (free) the first time"
 	print_relay_claude_plan_reminder
 }
 
@@ -610,6 +606,9 @@ relay_install_method="${RELAY_INSTALL_METHOD:-auto}"
 relay_binary_platform_name=
 relay_method=npm
 relay_binary_fallback_note=
+# Set when installing Node.js for the npm path uses sudo (apt, apk, or libstdc++ for the musl build): the header then
+# says so instead of "no sudo".
+relay_node_sudo=0
 
 # Whether this is a CI job: nobody is there to ask, and the PATH is the job's own business.
 relay_is_ci() {
@@ -893,11 +892,19 @@ relay_header_phase() {
 		printf '%sInstalled%s%s · 5 of 5 · %s%s' "$relay_c_white" "$relay_c_reset" "$relay_c_dim" "$relay_done_elapsed" "$relay_c_reset"
 		return
 	fi
-	relay_hp_step=1
+	# The step in progress: the one running, else (between two steps) the first one not done yet. Never a step that
+	# finished: drawn between "✓ Verified checksum" and step 4 starting, the header used to fall back to "step 1".
+	relay_hp_step=
+	relay_hp_next=
 	for relay_hp_i in 1 2 3 4 5; do
 		eval "relay_hp_state=\$relay_st_$relay_hp_i"
-		[ "$relay_hp_state" = running ] && relay_hp_step="$relay_hp_i"
+		case "$relay_hp_state" in
+			running) [ -n "$relay_hp_step" ] || relay_hp_step="$relay_hp_i" ;;
+			done) ;;
+			*) [ -n "$relay_hp_next" ] || relay_hp_next="$relay_hp_i" ;;
+		esac
 	done
+	relay_hp_step="${relay_hp_step:-${relay_hp_next:-5}}"
 	relay_hp_secs=0
 	if [ -n "${relay_install_started_ds:-}" ]; then
 		relay_hp_secs=$((($(relay_now_ds) - relay_install_started_ds) / 10))
@@ -905,12 +912,12 @@ relay_header_phase() {
 	printf '%sInstalling%s%s · step %s of 5 · %ss%s' "$relay_c_white" "$relay_c_reset" "$relay_c_dim" "$relay_hp_step" "$relay_hp_secs" "$relay_c_reset"
 }
 
-# The header's third row: "one native binary · no sudo · nothing sent" when the native build is going in and the
-# terminal has room for it (O01), "no sudo · nothing sent" otherwise.
+# The header's third row, the one place a terminal install says sudo: "sudo for Node.js only · nothing sent" when
+# installing Node.js for npm uses sudo (known before the block is first drawn, see relay_main_inline), "no sudo · nothing
+# sent" otherwise. Both are literally true: nothing leaves the machine during install (the count is left for Relay).
 relay_header_promise() {
-	relay_capsule_span
-	if [ "$relay_method" = binary ] && [ "$relay_screen_cols" -gt $(($(relay_capsule_label_col) + 42)) ]; then
-		printf 'one native binary · no sudo · nothing sent'
+	if [ "$relay_node_sudo" = 1 ]; then
+		printf 'sudo for Node.js only · nothing sent'
 	else
 		printf 'no sudo · nothing sent'
 	fi
@@ -1110,7 +1117,6 @@ relay_fail_unsupported() {
 
 relay_fail_tool() {
 	relay_stop "$1" "" "$(relay_x "stopped · this machine has no $2, which the installer needs")" \
-		"  $(relay_d "cause: a tool missing on this machine, not Relay")" \
 		"$(relay_nothing "nothing was installed" "$(relay_untouched)")" \
 		"  next: install $2, then run the same command again"
 }
@@ -1123,7 +1129,7 @@ relay_fail_fetch() {
 		network)
 			relay_stop "$1" "$relay_try_note" \
 				"$(relay_x "couldn't reach $relay_ff_host")$(relay_d " · $relay_fetch_detail")" \
-				"  $(relay_d "cause: your network or a proxy, not Relay")" \
+				"  $(relay_d "This looks like a network or proxy problem.")" \
 				"$(relay_nothing "nothing was installed" "$([ "$1" = 2 ] && printf 'nothing was downloaded' || printf 'the download was deleted') · $(relay_untouched)")" \
 				"" \
 				"  if you're behind a proxy, set HTTPS_PROXY and run it again:" \
@@ -1133,14 +1139,14 @@ relay_fail_fetch() {
 			;;
 		missing)
 			relay_stop "$1" "" "$(relay_x "stopped · $2 isn't at $3")$(relay_d " · $relay_fetch_detail")" \
-				"  $(relay_d "cause: Relay's release server, not your machine")" \
+				"  $(relay_d "This looks like a problem on Relay's release server.")" \
 				"$(relay_nothing "nothing was installed" "$(relay_untouched)")" \
 				"  next: run the same command again in a few minutes" \
 				"        $(relay_d "service status: status.relayevals.com · to install a version you name: RELAY_VERSION=<version>")"
 			;;
 		*)
 			relay_stop "$1" "$relay_try_note" "$(relay_x "stopped · $relay_ff_host answered with an error")$(relay_d " · $relay_fetch_detail")" \
-				"  $(relay_d "cause: Relay's release server, not your machine")" \
+				"  $(relay_d "This looks like a problem on Relay's release server.")" \
 				"$(relay_nothing "nothing was installed" "$(relay_untouched)")" \
 				"  next: run the same command again in a few minutes" \
 				"        $(relay_d "service status: status.relayevals.com")"
@@ -1291,7 +1297,7 @@ relay_os_name() { uname -s 2>/dev/null || printf 'unknown'; }
 relay_os_arch() { uname -m 2>/dev/null || printf 'unknown'; }
 relay_macos_version() { sw_vers -productVersion 2>/dev/null || printf '0'; }
 
-# Sets relay_os_line ("Found macOS 15 · Apple silicon · zsh"), or stops with what is supported.
+# Sets relay_os_line ("macOS 15 · Apple silicon · zsh"), or stops with what is supported.
 relay_check_machine() {
 	relay_cm_os=$(relay_os_name)
 	relay_cm_arch=$(relay_os_arch)
@@ -1305,9 +1311,9 @@ relay_check_machine() {
 				x86_64) relay_cm_chip=Intel ;;
 				*) relay_cm_chip="$relay_cm_arch" ;;
 			esac
-			relay_os_line="Found macOS $relay_cm_major · $relay_cm_chip · $relay_shell_name"
+			relay_os_line="macOS $relay_cm_major · $relay_cm_chip · $relay_shell_name"
 			if [ "$relay_cm_major" -lt 13 ]; then
-				relay_os_line="Found macOS $relay_cm_ver · $relay_cm_chip · $relay_shell_name"
+				relay_os_line="macOS $relay_cm_ver · $relay_cm_chip · $relay_shell_name"
 				relay_fail_unsupported "relay needs macOS 13 or later · this Mac has $relay_cm_ver" \
 					"update macOS · System Settings → General → Software Update"
 			fi
@@ -1317,7 +1323,7 @@ relay_check_machine() {
 			esac
 			;;
 		Linux)
-			relay_os_line="Found Linux $relay_cm_arch · $relay_shell_name"
+			relay_os_line="Linux $relay_cm_arch · $relay_shell_name"
 			case "$relay_cm_arch" in
 				x86_64|amd64|aarch64|arm64) ;;
 				*) relay_fail_unsupported "relay needs Linux on x86_64 or arm64 · this machine is $relay_cm_arch" \
@@ -1325,12 +1331,12 @@ relay_check_machine() {
 			esac
 			;;
 		MINGW*|MSYS*|CYGWIN*)
-			relay_os_line="Found Windows ($relay_cm_os) · $relay_shell_name"
+			relay_os_line="Windows ($relay_cm_os) · $relay_shell_name"
 			relay_fail_unsupported "relay runs on Windows only through WSL 2" \
 				"install WSL 2 (wsl --install), then run this command inside it"
 			;;
 		*)
-			relay_os_line="Found $relay_cm_os $relay_cm_arch · $relay_shell_name"
+			relay_os_line="$relay_cm_os $relay_cm_arch · $relay_shell_name"
 			relay_fail_unsupported "relay doesn't support $relay_cm_os" "run relay on macOS, Linux or WSL 2"
 			;;
 	esac
@@ -1354,10 +1360,22 @@ relay_install_node_inline() {
 		homebrew) relay_in_label="Homebrew" ;;
 		apt) relay_in_label="apt" ;;
 		apk) relay_in_label="apk" ;;
+		musl) relay_in_label="the musl build from unofficial-builds.nodejs.org" ;;
+		none)
+			# Stops before anything is downloaded: no Node.js that runs here can be installed for this machine.
+			relay_count_step=INSTALL_NODE_MISSING
+			relay_stop 1 "" "$(relay_x "stopped · relay needs Node.js $relay_min_node or newer, and there is none to install for $(relay_linux_name) on $(relay_os_arch)")" \
+				"  cause: $(relay_node_offered_text)" \
+				"$(relay_nothing "nothing was downloaded or installed" "$(relay_untouched)")" \
+				"  next: install Node.js $relay_min_node or newer yourself, then run the same command again"
+			;;
 		*) relay_in_method=standalone; relay_in_label="standalone Node.js" ;;
 	esac
 	relay_node_install_attempted=1
 	if node_install_needs_sudo "$relay_in_method"; then
+		# This install of Node.js uses sudo, so the header says so (relay_main_inline usually knew before its first frame;
+		# a release with no native build for this machine finds out only here).
+		relay_node_sudo=1
 		if [ "$relay_live" != 1 ] || ! ( : <>/dev/tty ) 2>/dev/null; then
 			relay_count_step=INSTALL_NODE_MISSING
 			relay_stop 1 "" "$(relay_x "stopped · relay needs Node.js $relay_min_node or newer, and installing it with $relay_in_label needs sudo")" \
@@ -1366,8 +1384,14 @@ relay_install_node_inline() {
 				"  next: install Node.js $relay_min_node or newer, then run the same command again"
 		fi
 		relay_live_clear
-		printf 'Relay needs Node.js %s or newer. Installing it with %s needs your password (sudo); nothing else will ask.\n' \
-			"$relay_min_node" "$relay_in_label"
+		if [ "$relay_in_method" = musl ]; then
+			printf 'Relay needs Node.js %s or newer, which %s does not have. It installs the Node.js musl build into %s;\n' \
+				"$relay_min_node" "$(relay_linux_name)" "$(relay_display_path "$(node_standalone_base_dir)")"
+			printf 'adding libstdc++, which that needs, with apk needs your password (sudo); nothing else will ask.\n'
+		else
+			printf 'Relay needs Node.js %s or newer. Installing it with %s needs your password (sudo); nothing else will ask.\n' \
+				"$relay_min_node" "$relay_in_label"
+		fi
 		sudo -v </dev/tty
 		relay_live_start
 	fi
@@ -1381,24 +1405,29 @@ relay_install_node_inline() {
 		relay_count_step=INSTALL_NODE_MISSING
 		relay_in_tail=$(tail -n 6 "$relay_in_dir/output" 2>/dev/null | sed 's/^/    /')
 		rm -rf "$relay_in_dir"
+		relay_in_cause="what $relay_in_label said:"
+		[ "$relay_in_method" = musl ] && relay_in_cause="what the Node.js download or apk said:"
 		relay_stop 1 "" "$(relay_x "stopped · installing Node.js with $relay_in_label failed (exit $relay_in_status)")" \
-			"  cause: $relay_in_label on this machine, not Relay" \
+			"  $relay_in_cause" \
 			"$relay_in_tail" \
 			"  nothing else was installed · $(relay_untouched)" \
-			"  next: install Node.js $relay_min_node or newer yourself, then run the same command again"
+			"  next: install Node.js $relay_min_node or newer yourself$(relay_alpine_hint), then run the same command again"
 	fi
 	rm -rf "$relay_in_dir"
-	if [ "$relay_in_method" = standalone ]; then
+	if [ "$relay_in_method" = standalone ] || [ "$relay_in_method" = musl ]; then
 		load_standalone_node
 		RELAY_NODE_INSTALLED_STANDALONE=1
 	fi
 	hash -r 2>/dev/null || :
 	if ! relay_node_ready; then
+		# The Node.js that was installed is first on this shell's PATH, so a new terminal would not do better: say what
+		# it printed instead.
 		relay_count_step=INSTALL_NODE_MISSING
-		relay_stop 1 "" "$(relay_x "stopped · Node.js was installed with $relay_in_label, but this shell still can't run Node.js $relay_min_node or newer")" \
-			"  cause: the Node.js on this machine, not Relay" \
+		relay_in_said=$(node --version 2>&1 </dev/null | tail -n 3 | sed 's/^/    node --version: /' || :)
+		relay_stop 1 "" "$(relay_x "stopped · Node.js was installed with $relay_in_label, but it can't run Node.js $relay_min_node or newer here")" \
+			"${relay_in_said:-    node --version: no node on PATH}" \
 			"  nothing else was installed · $(relay_untouched)" \
-			"  next: open a new terminal and run the same command again"
+			"  next: install Node.js $relay_min_node or newer yourself$(relay_alpine_hint), then run the same command again"
 	fi
 	relay_os_line="$relay_os_line · Node.js $(relay_node_version) (installed with $relay_in_label)"
 }
@@ -1424,6 +1453,15 @@ relay_path_step() {
 	relay_pl_5="Add $relay_ps_where to PATH in $relay_profile_display"
 	relay_path_paren=
 	if original_relay_path=$(resolve_relay_with_original_path) && [ "$original_relay_path" -ef "$relay_installed_bin" ]; then
+		# An earlier installer's line at the end of ~/.bashrc is found by this terminal but not by `ssh host relay`,
+		# `bash -lc relay` or cron: in a terminal, it moves to the top. Nothing else changes.
+		if [ "$relay_live" = 1 ] && profile=$(detect_shell_profile) && [ "$profile" = "${HOME:-/nonexistent}/.bashrc" ] &&
+			[ -f "$profile" ] && relay_ap_has_block_in "$profile" &&
+			[ "$(sed -n 2p "$profile")" != "$(relay_path_line)" ]; then
+			relay_add_path_lines "$profile"
+			relay_path_step_wrote
+			return 0
+		fi
 		relay_step_set 5 done "PATH already finds $relay_cmd" " · nothing changed"
 		[ "$relay_plain" = 1 ] && relay_say "PATH already finds $relay_cmd · nothing changed"
 		relay_path_head="PATH already finds $relay_cmd"
@@ -1455,26 +1493,38 @@ relay_path_step() {
 		relay_path_paren="(add the line below)"
 		return 0
 	fi
-	if shell_profile_has_relay_path "$profile"; then
+	relay_add_path_lines "$profile"
+	if [ "$relay_ap_count" = 0 ]; then
 		relay_step_set 5 done "PATH line already in $relay_profile_display"
 		relay_path_head="PATH line already in $relay_profile_display"
 		return 0
 	fi
-	mkdir -p "$(dirname "$profile")"
-	{
-		printf '\n# %s\n' "$relay_path_comment"
-		printf '%s\n' "$(relay_path_line)"
-	} >>"$profile"
-	relay_step_set 5 done "Added $relay_ps_where to PATH in $relay_profile_display" " · 1 line"
-	relay_path_head="PATH added to $relay_profile_display"
-	relay_path_paren="(1 line)"
+	relay_path_step_wrote
+}
+
+# Step 5's line and the summary's PATH row once relay_add_path_lines changed a file.
+relay_path_step_wrote() {
+	if [ "$relay_ap_verb" = Moved ]; then
+		relay_step_set 5 done "Moved the PATH line to the top of $relay_ap_changed" " · so every bash finds $relay_cmd"
+		relay_path_head="PATH line moved to the top of $relay_ap_changed"
+		relay_path_paren=
+		return 0
+	fi
+	relay_ap_lines="1 line"
+	[ "$relay_ap_count" -gt 1 ] && relay_ap_lines="$relay_ap_count lines"
+	relay_step_set 5 done "Added $relay_ps_where to PATH in $relay_ap_changed" " · $relay_ap_lines"
+	relay_path_head="PATH added to $relay_ap_changed"
+	relay_path_paren="($relay_ap_lines)"
 }
 
 # ── The summary the block collapses to (O01), and what comes next (O03) ──
 # One block under the command, drawn in place: relay_block_draw takes away the rows it drew last and draws a form.
-#   done      O01: the arrow line, "✓ relay 0.6.122 installed in 4.2s", where it went, the PATH line, the script link
-#   now|later O03: the summary flush left, then one line: relay starting here, or how to start it; the blank row under
-#             the command goes too, so first run starts right below
+#   done      O01: the arrow line, "✓ Relay 0.6.122 is installed and signed.", where it went, the PATH line, the script
+#             link; up for a moment, before one of:
+#   now|later O03: the summary flush left, what is and is not sent, then one line: relay starting here, or how to start
+#             it (spec §3.1); the blank row under the command goes too, so first run starts right below
+# The checksum and the signature are said once: "signed" in the first line when the signature was verified, the sha256
+# under it.
 relay_block_rows=0
 
 # Prints one line of the block and counts the rows it takes.
@@ -1483,21 +1533,46 @@ relay_emit() {
 	relay_block_rows=$((relay_block_rows + $(relay_rows_of "$1")))
 }
 
-relay_sig_marks() {
-	printf ' %s✓%s' "$relay_c_ok" "$relay_c_reset"
+# "Relay 0.6.122 is installed and signed." when its release signature was verified; "… is installed." otherwise.
+relay_done_words() {
 	if [ "$relay_signature_ok" = 1 ]; then
-		printf ' %s· signed by Relay%s %s✓%s' "$relay_c_dim" "$relay_c_reset" "$relay_c_ok" "$relay_c_reset"
+		printf 'Relay %s is installed and signed.' "$version"
+	else
+		printf 'Relay %s is installed.' "$version"
 	fi
 }
 
-# Whether this terminal finds relay (O02). The PATH line reaches new shells only: a shell already open (the one that ran
-# curl | bash) keeps its old PATH, so where it would not find relay the line says how to make it (K25). The installer
-# starts relay by its full path, so it works either way.
-relay_this_terminal_line() {
-	if relay_on_current_path; then
-		printf 'new terminals will find %s; this one is ready too' "$relay_cmd"
+# What is and is not sent, said once and literally (spec §5.4): nothing leaves the machine during install; the
+# install's one count is written here for Relay, which sends its anonymous counts only after it has told the person
+# about them (decision 6), and DO_NOT_TRACK=1 turns them off. With counts off, the installer writes no count at all.
+relay_sent_words() {
+	if relay_counts_enabled; then
+		printf 'nothing was sent during install · Relay counts installs anonymously, and tells you before sending any · DO_NOT_TRACK=1 turns that off'
 	else
-		printf 'new terminals will find %s; in this one, run exec $SHELL first' "$relay_cmd"
+		printf 'nothing was sent during install, and nothing was counted'
+	fi
+}
+
+# The one next step under the summary (spec §3.1). Relay starting here: "Starting it now." and where to find it next
+# time. Not starting it (RELAY_INSTALL_SETUP=later): how to start it, literally: this terminal finds relay only once it
+# has read the new PATH line, unless it already did; another relay first on PATH, or no PATH line written, leaves the
+# full path (the notes above say why).
+#   $1 now|later
+relay_next_words() {
+	if [ "$1" = now ]; then
+		if [ -n "$relay_count_outcome" ]; then
+			printf 'Starting it now.'
+		elif relay_on_current_path; then
+			printf 'Starting it now. Next time, type %s in any terminal.' "$relay_cmd"
+		else
+			printf 'Starting it now. Next time, type %s in a new terminal.' "$relay_cmd"
+		fi
+	elif [ -n "$relay_count_outcome" ]; then
+		printf 'Run %s to start.' "$(relay_display_path "$relay_installed_bin")"
+	elif relay_on_current_path; then
+		printf 'Type %s to start.' "$relay_cmd"
+	else
+		printf 'In this terminal, run exec $SHELL first, or open a new one. Then type %s.' "$relay_cmd"
 	fi
 }
 
@@ -1514,31 +1589,26 @@ relay_block_draw() {
 	relay_bd_paren="${relay_path_paren:+ $relay_path_paren}"
 	case "$relay_bd_form" in
 	now|later)
-		relay_emit "${relay_c_ok}✓${relay_c_reset} relay $version installed in $relay_done_elapsed"
-		relay_emit "  $(relay_d "$relay_bd_where · $relay_bd_sha")$(relay_sig_marks)"
-		relay_emit "  $(relay_d "$relay_path_head$relay_bd_paren · uninstall: $relay_cmd uninstall")"
-		relay_emit "  $(relay_d "$(relay_this_terminal_line)")"
+		relay_emit "${relay_c_ok}✓${relay_c_reset} ${relay_c_white}$(relay_done_words)${relay_c_reset}"
+		relay_emit "  $(relay_d "$relay_bd_where · $relay_bd_sha · $relay_done_elapsed")"
+		relay_emit "  $(relay_d "$relay_path_head$relay_bd_paren")"
 		relay_block_notes
+		relay_emit "  $(relay_d "$(relay_sent_words)")"
 		relay_emit ""
-		if [ "$relay_bd_form" = now ]; then
-			relay_emit "${relay_c_ok}→${relay_c_reset} Starting $relay_cmd $(relay_d "· approve the sign-in in your browser; it sets up the rest")"
-		else
-			relay_emit "${relay_c_ok}→${relay_c_reset} Run $relay_cmd to start $(relay_d "· approve the sign-in in your browser; it sets up the rest")"
-		fi
+		relay_emit "${relay_c_ok}→${relay_c_reset} $(relay_next_words "$relay_bd_form")"
 		return 0
 		;;
 	esac
 	relay_emit "  ${relay_c_faint}· · · · · · · · · · · · ·${relay_c_reset} ${relay_c_accent}→${relay_c_reset}  ${relay_c_brand}Relay${relay_c_reset} $(relay_d "$version")"
-	relay_emit "  ${relay_c_ok}✓${relay_c_reset} ${relay_c_bold}${relay_c_white}relay $version installed${relay_c_reset} $(relay_d "in $relay_done_elapsed")"
-	relay_emit "    ${relay_c_white}$relay_bd_where${relay_c_reset} $(relay_d "· $relay_bd_sha")$(relay_sig_marks)"
-	relay_emit "    $relay_path_head${relay_path_paren:+ $(relay_d "$relay_path_paren")} $(relay_d "· uninstall:") $relay_cmd uninstall"
+	relay_emit "  ${relay_c_ok}✓${relay_c_reset} ${relay_c_bold}${relay_c_white}$(relay_done_words)${relay_c_reset}"
+	relay_emit "    ${relay_c_white}$relay_bd_where${relay_c_reset} $(relay_d "· $relay_bd_sha · $relay_done_elapsed")"
+	relay_emit "    $relay_path_head${relay_path_paren:+ $(relay_d "$relay_path_paren")}"
 	relay_block_notes
 	relay_emit ""
-	relay_emit "  $(relay_d "read what this script does: $relay_script_url · nothing is sent to Relay during install")"
+	relay_emit "  $(relay_d "read what this script does: $relay_script_url · nothing was sent during install")"
 }
 
-# Warnings and notes from the install (a signature that could not be checked, another relay first on PATH), dim, under
-# the summary.
+# Notes from the install (another relay first on PATH, an old command removed), dim, under the summary.
 relay_block_notes() {
 	if [ -n "$relay_signature_note" ]; then
 		relay_emit "    $(relay_d "$relay_signature_note")"
@@ -1579,9 +1649,9 @@ relay_summary() {
 			relay_say "$relay_su_line"
 		done
 	fi
-	relay_say "telemetry off (no one to ask here) · nothing was sent"
+	relay_say "$(relay_sent_words)"
 	relay_say "done in $relay_done_elapsed · exit 0"
-	relay_say "next: $relay_cmd --version · $relay_cmd ci --help"
+	relay_say "next: $relay_cmd --version"
 }
 
 # Whether the shell that ran this script would start this install by name.
@@ -1592,20 +1662,23 @@ relay_on_current_path() {
 
 # ── O02: no question (23 Nov 2026). In a terminal, relay starts right here and sets itself up after one sign-in in the
 # browser; RELAY_INSTALL_SETUP=later leaves it for later (and =now starts it without a check). CI and a terminal-less run
-# never start it.
+# never start it. In a terminal the summary then gives way to what comes next: relay starting, or how to start it.
 relay_ask_setup() {
 	relay_as_tty="${RELAY_INSTALLER_TTY:-/dev/tty}"
 	case "$(printf '%s' "${RELAY_INSTALL_SETUP:-}" | tr '[:upper:]' '[:lower:]')" in
-		now) relay_setup_answer=now; return 0 ;;
-		later|no|0) relay_setup_answer=later; return 0 ;;
+		now) relay_setup_answer=now ;;
+		later|no|0) relay_setup_answer=later ;;
+		*)
+			relay_setup_answer=later
+			if [ "$relay_live" = 1 ] && ( : <>"$relay_as_tty" ) 2>/dev/null; then
+				relay_setup_answer=now
+			fi
+			;;
 	esac
-	relay_setup_answer=later
 	[ "$relay_live" = 1 ] || return 0
-	( : <>"$relay_as_tty" ) 2>/dev/null || return 0
-	relay_setup_answer=now
-	# O01's summary stays up a moment, then gives way to relay.
+	# O01's summary stays up a moment, then gives way to what comes next.
 	sleep "$relay_hold"
-	relay_block_draw now
+	relay_block_draw "$relay_setup_answer"
 }
 
 # The device relay's first run reads its keys from: this terminal's own device (/dev/ttys003), never the /dev/tty
@@ -1862,7 +1935,7 @@ relay_node_can_verify() {
 relay_binary_step() {
 	relay_count_step=INSTALL_BROKEN
 	relay_bs_root=$(relay_binary_root)
-	relay_step_set 4 running "Installing to $(relay_display_path "$relay_bs_root/bin")" "  (no sudo)"
+	relay_step_set 4 running "Installing to $(relay_display_path "$relay_bs_root/bin")"
 	relay_bs_log="$relay_dl_dir/binary.log"
 	relay_install_binary "$tarball_path" "$version" >"$relay_bs_log" 2>&1 </dev/null &
 	if relay_live_wait $!; then
@@ -1870,7 +1943,7 @@ relay_binary_step() {
 	else
 		relay_bs_tail=$(tail -n 6 "$relay_bs_log" 2>/dev/null | sed 's/^/    /')
 		relay_stop 4 "" "$(relay_x "stopped · relay $version was downloaded and verified, but didn't install")" \
-			"  cause: Relay's build for $relay_binary_platform_name, not your machine (it passed its checksum)" \
+			"  it passed its checksum; what Relay's build for $relay_binary_platform_name printed:" \
 			"$relay_bs_tail" \
 			"  nothing else changed: a relay you had before still starts · $(relay_untouched)" \
 			"  next: report it with the lines above: relayevals.com/docs" \
@@ -1879,7 +1952,7 @@ relay_binary_step() {
 	relay_installed_bin="$relay_bs_root/bin/$relay_cmd"
 	relay_install_bin_dir="$relay_bs_root/bin"
 	relay_path_comment="Relay native binary"
-	relay_step_set 4 done "Installed $(relay_display_path "$relay_installed_bin")" "  (no sudo)"
+	relay_step_set 4 done "Installed $(relay_display_path "$relay_installed_bin")"
 	[ "$relay_plain" = 1 ] && relay_say "installed $relay_installed_bin (no sudo)"
 	return 0
 }
@@ -1901,16 +1974,20 @@ relay_main_inline() {
 	relay_sl_1="Check $relay_this_machine"
 	relay_sl_2="Download relay"
 	relay_sl_3="Verify checksum"
-	if [ -n "$relay_release_signers" ] || relay_signature_required; then
+	if relay_signature_applies; then
 		relay_sl_3="Verify checksum and signature"
 	fi
 	relay_sl_4="Install relay"
-	relay_sm_4="  (no sudo)"
 	relay_sl_5="Add relay to PATH in $relay_profile_display"
 	relay_pl_1="$relay_sl_1" relay_pl_2="$relay_sl_2" relay_pl_3="$relay_sl_3" relay_pl_4="$relay_sl_4"
 	relay_pl_5="$relay_sl_5"
 	relay_check_machine
 	relay_choose_method
+	# Sudo is said once, in the header, and only where it is true: when Node.js for npm will be installed with sudo,
+	# the header says so from its first frame, never "no sudo" before the password is asked for.
+	if [ "$relay_method" = npm ] && ! relay_node_ready && node_install_needs_sudo "$(detect_node_install_method)"; then
+		relay_node_sudo=1
+	fi
 	relay_live_start
 	relay_step_set 1 running "Checking $relay_this_machine"
 	# The native build needs no Node; npm does, so Node is checked (and installed) only for npm.
@@ -1918,7 +1995,7 @@ relay_main_inline() {
 		relay_node_step
 	fi
 	relay_step_set 1 done "$relay_os_line"
-	[ "$relay_plain" = 1 ] && relay_say "$(printf '%s' "$relay_os_line" | sed 's/^Found/found/; s/Linux/linux/')"
+	[ "$relay_plain" = 1 ] && relay_say "$relay_os_line"
 
 	# Step 2: which version, then the package, with the bar.
 	relay_count_step=INSTALL_DOWNLOAD
@@ -1958,7 +2035,7 @@ relay_main_inline() {
 	tarball_url="$relay_base_url/releases/v$version/$tarball_name"
 	tarball_path="$relay_dl_dir/$tarball_name"
 	signature_path="$relay_dl_dir/SHA256SUMS.sig"
-	if [ -n "$relay_release_signers" ] || relay_signature_required; then
+	if relay_signature_applies; then
 		curl -fsSL --connect-timeout 10 "$checksums_url.sig" -o "$signature_path" 2>/dev/null || rm -f "$signature_path"
 	fi
 	relay_fetch "$tarball_url" "$tarball_path" progress || relay_fail_fetch 2 "relay $version" "$tarball_url"
@@ -1967,13 +2044,12 @@ relay_main_inline() {
 	relay_step_set 2 done "Downloaded relay $version" " · $(relay_mb_text "$relay_download_bytes") in $(relay_ds_text "$relay_fetch_elapsed")"
 	[ "$relay_plain" = 1 ] && relay_say "downloaded in $(relay_ds_text "$relay_fetch_elapsed")"
 
-	# Step 3: the checksum (and the signature, once Relay's release keys are pinned).
+	# Step 3: the checksum, and the signature whenever one is checked (a release key pinned, or one required).
 	relay_count_step=INSTALL_CHECKSUM
 	relay_step_set 3 running "$(printf '%s' "$relay_pl_3" | sed 's/^Verify/Verifying/')"
 	relay_expected=$(awk -v file="$tarball_name" '$2 == file || $2 == "*" file { print $1; exit }' "$relay_dl_dir/SHA256SUMS")
 	if [ -z "$relay_expected" ]; then
 		relay_stop 3 "" "$(relay_x "stopped · relay $version's checksums don't list $tarball_name")" \
-			"  cause: Relay's release, not your machine" \
 			"  nothing was installed · the download was deleted · $(relay_untouched)" \
 			"  next: run the same command again in a few minutes · report it: relayevals.com/security"
 	fi
@@ -1984,7 +2060,7 @@ relay_main_inline() {
 	fi
 	verify_relay_release_signature "$version" "$relay_dl_dir/SHA256SUMS" "$signature_path"
 	if [ "$relay_signature_ok" = 1 ]; then
-		relay_step_set 3 done "Verified checksum and signature" " · sha256 $(relay_short_digest "$relay_digest") · signed by Relay"
+		relay_step_set 3 done "Verified checksum and signature" " · sha256 $(relay_short_digest "$relay_digest")"
 	else
 		relay_step_set 3 done "Verified checksum" " · sha256 $(relay_short_digest "$relay_digest")"
 	fi
@@ -2013,7 +2089,7 @@ relay_main_inline() {
 "
 	fi
 	if [ -n "$relay_retired_alias_removed" ]; then
-		relay_notes="${relay_notes}Removed $(relay_display_path "$relay_retired_alias_removed"). It started the retired relayevals CLI instead of this install; open a new terminal before you type $relay_cmd.
+		relay_notes="${relay_notes}Removed $(relay_display_path "$relay_retired_alias_removed"), an old $relay_cmd command that started a different program. Open a new terminal before you type $relay_cmd.
 "
 		relay_retired_alias_removed=
 	fi
@@ -2035,7 +2111,7 @@ relay_npm_step() {
 	else
 		relay_npm_where=$(npm prefix -g 2>/dev/null || printf 'npm')
 	fi
-	relay_step_set 4 running "Installing to $(relay_display_path "$relay_npm_where")" "  (no sudo)"
+	relay_step_set 4 running "Installing to $(relay_display_path "$relay_npm_where")"
 	clear_stale_relay_alias >/dev/null
 	clear_retired_gate_alias
 	relay_npm_log="$relay_dl_dir/npm.log"
@@ -2052,7 +2128,7 @@ relay_npm_step() {
 		relay_npm_status=$?
 		relay_npm_tail=$(tail -n 8 "$relay_npm_log" 2>/dev/null | sed 's/^/    /')
 		relay_stop 4 "" "$(relay_x "stopped · npm couldn't install relay (exit $relay_npm_status)")" \
-			"  cause: npm on this machine, not the download (it passed its checksum)" \
+			"  the download passed its checksum; what npm said:" \
 			"$relay_npm_tail" \
 			"  $(relay_untouched)" \
 			"  next: run the same command again · still failing? send the lines above to relayevals.com/docs"
@@ -2079,12 +2155,12 @@ relay_npm_step() {
 	if ! relay_smoke=$("$relay_installed_bin" --version 2>&1); then
 		relay_smoke=$(printf '%s\n' "$relay_smoke" | tail -n 6 | sed 's/^/    /')
 		relay_stop 4 "" "$(relay_x "stopped · relay was installed but doesn't start")" \
-			"  cause: Relay's package, not your machine" \
+			"  what it printed:" \
 			"$relay_smoke" \
 			"  $(relay_untouched)" \
 			"  next: report it with the lines above: relayevals.com/docs"
 	fi
-	relay_step_set 4 done "Installed $(relay_display_path "$relay_installed_bin")" "  (no sudo)"
+	relay_step_set 4 done "Installed $(relay_display_path "$relay_installed_bin")"
 	[ "$relay_plain" = 1 ] && relay_say "installed $relay_installed_bin (no sudo)"
 	return 0
 }
@@ -2098,8 +2174,7 @@ relay_choose_method() {
 		npm) relay_install_method=npm ;;
 		*)
 			relay_stop 1 "" "$(relay_x "stopped · RELAY_INSTALL_METHOD is $relay_install_method, which is not a way to install relay")" \
-				"  cause: RELAY_INSTALL_METHOD on this machine, not Relay" \
-				"  nothing was downloaded or installed · $(relay_untouched)" \
+					"  nothing was downloaded or installed · $(relay_untouched)" \
 				"  next: set it to binary or npm, or unset it"
 			;;
 	esac
@@ -2136,7 +2211,6 @@ relay_node_step() {
 relay_binary_fallback() {
 	if [ "$relay_install_method" = binary ]; then
 		relay_stop 2 "" "$(relay_x "stopped · relay $1 has no native build for $relay_binary_platform_name")" \
-			"  cause: Relay's release, not your machine" \
 			"  nothing was installed · $(relay_untouched)" \
 			"  next: install with npm instead: RELAY_INSTALL_METHOD=npm"
 	fi
@@ -2146,12 +2220,14 @@ relay_binary_fallback() {
 	relay_sl_5="Add relay to PATH in $relay_profile_display"
 	relay_pl_4="$relay_sl_4"
 	relay_pl_5="$relay_sl_5"
+	# The download waits while Node.js is checked (and installed) on step 1, so the header and the list show step 1.
+	relay_step_set 2 pending "$relay_pl_2"
 	# The Node checks keep their own `version`; the release's is put back after them.
 	relay_bf_version="$1"
 	relay_node_step
 	version="$relay_bf_version"
 	relay_step_set 1 done "$relay_os_line"
-	[ "$relay_plain" = 1 ] && relay_say "$(printf '%s' "$relay_os_line" | sed 's/^Found/found/') (no native build of $1 for $relay_binary_platform_name: npm installs it)"
+	[ "$relay_plain" = 1 ] && relay_say "$relay_os_line (no native build of $1 for $relay_binary_platform_name: npm installs it)"
 	relay_count_step=INSTALL_DOWNLOAD
 	relay_step_set 2 running "Downloading relay $1"
 }
@@ -3081,6 +3157,13 @@ install_node_npm_interactive() {
 		apt) label="apt" ;;
 		apk) label="apk" ;;
 		standalone) label="standalone Node.js" ;;
+		musl) label="the musl build from unofficial-builds.nodejs.org" ;;
+		none)
+			printf 'Relay needs Node.js %s or newer: %s, and there is no Node.js build for %s to install.\n' \
+				"$relay_min_node" "$(relay_node_offered_text)" "$(uname -m)"
+			printf 'Install Node.js %s or newer yourself, then run this installer again.\n' "$relay_min_node"
+			return 1
+			;;
 		*)
 			method=standalone
 			label="standalone Node.js"
@@ -3139,6 +3222,14 @@ detect_node_install_method() {
 				printf 'apt'
 			elif command -v apk >/dev/null 2>&1 && apk_node_candidate_is_new_enough; then
 				printf 'apk'
+			elif relay_is_musl; then
+				# nodejs.org's own Linux builds need glibc and cannot run here (Alpine 3.20: "No such file or directory").
+				# The Node.js project's musl build does, for x64 and arm64; anything else has no Node.js Relay can install.
+				if node_musl_arch >/dev/null; then
+					printf 'musl'
+				else
+					printf 'none'
+				fi
 			else
 				printf 'standalone'
 			fi
@@ -3155,8 +3246,62 @@ apt_node_candidate_is_new_enough() {
 }
 
 apk_node_candidate_is_new_enough() {
-	version=$(apk search -x nodejs 2>/dev/null | awk -F- '/^nodejs-/ { print $2; exit }')
+	version=$(apk_node_candidate_version)
 	[ -n "$version" ] && node_version_string_is_new_enough "$version"
+}
+
+# The nodejs version apk would install ("20.15.1" on Alpine 3.20), or nothing. A machine whose package index was never
+# downloaded (a fresh container, or packages added with --no-cache) has no local index, and an account that is not
+# root cannot write one, so then apk reads the index over the network without keeping it.
+apk_node_candidate_version() {
+	apk_node_found=$(apk search -x nodejs 2>/dev/null | sed -n 's/^nodejs-\([0-9][0-9.]*\)-r[0-9]*$/\1/p' | sed -n 1p)
+	if [ -z "$apk_node_found" ]; then
+		apk_node_found=$(apk --no-cache search -x nodejs 2>/dev/null | sed -n 's/^nodejs-\([0-9][0-9.]*\)-r[0-9]*$/\1/p' | sed -n 1p)
+	fi
+	printf '%s' "$apk_node_found"
+}
+
+# The CPU name of the Node.js project's musl builds for this machine (x64 or arm64), or a failure when there is none.
+node_musl_arch() {
+	case "$(uname -m)" in
+		x86_64|amd64) printf 'x64' ;;
+		arm64|aarch64) printf 'arm64' ;;
+		*) return 1 ;;
+	esac
+}
+
+# Whether the C++ runtime the musl build of Node.js links against is here (Alpine leaves it out of its base image).
+node_musl_has_libstdcxx() {
+	for node_musl_lib in /usr/lib/libstdc++.so.6 /lib/libstdc++.so.6 /usr/local/lib/libstdc++.so.6; do
+		[ -e "$node_musl_lib" ] && return 0
+	done
+	return 1
+}
+
+# "Alpine Linux 3.20", or "this Linux" when /etc/os-release does not say.
+relay_linux_name() {
+	relay_ln_name=$( (. /etc/os-release 2>/dev/null && printf '%s %s' "${NAME:-}" "${VERSION_ID:-}") 2>/dev/null || :)
+	relay_ln_name=$(printf '%s' "$relay_ln_name" | sed 's/^ *//; s/ *$//')
+	printf '%s' "${relay_ln_name:-this Linux}"
+}
+
+# What Node.js this machine's packages offer, for a stop: "Alpine Linux 3.20.3 offers Node.js 20.15.1 (apk)".
+relay_node_offered_text() {
+	relay_no_version=
+	if command -v apk >/dev/null 2>&1; then
+		relay_no_version=$(apk_node_candidate_version)
+	fi
+	if [ -n "$relay_no_version" ]; then
+		printf '%s offers Node.js %s (apk), older than %s' "$(relay_linux_name)" "$relay_no_version" "$relay_min_node"
+	else
+		printf '%s offers no Node.js %s or newer' "$(relay_linux_name)" "$relay_min_node"
+	fi
+}
+
+# On Alpine, where Node.js 22 comes from: " (Alpine 3.21 and newer have it: apk add nodejs npm)"; nothing elsewhere.
+relay_alpine_hint() {
+	[ -f /etc/alpine-release ] || return 0
+	printf ' (Alpine 3.21 and newer have it: apk add nodejs npm)'
 }
 
 node_version_string_is_new_enough() {
@@ -3200,7 +3345,7 @@ install_node_npm() {
 			"Installing Node.js and npm" \
 			"Using $label." \
 			run_node_install_method "$method"
-		if [ "$method" = standalone ]; then
+		if [ "$method" = standalone ] || [ "$method" = musl ]; then
 			load_standalone_node
 			RELAY_NODE_INSTALLED_STANDALONE=1
 		fi
@@ -3226,7 +3371,7 @@ Preparing Relay setup."
 			run_node_install_method "$method"
 	fi
 
-	if [ "$method" = standalone ]; then
+	if [ "$method" = standalone ] || [ "$method" = musl ]; then
 		load_standalone_node
 		RELAY_NODE_INSTALLED_STANDALONE=1
 	fi
@@ -3252,6 +3397,10 @@ node_install_needs_sudo() {
 			command -v xz >/dev/null 2>&1 && return 1
 			command -v apt-get >/dev/null 2>&1 || command -v apk >/dev/null 2>&1
 			;;
+		musl)
+			# Only for libstdc++, with apk; Node.js itself goes into a folder this account owns.
+			! node_musl_has_libstdcxx && command -v apk >/dev/null 2>&1
+			;;
 		*)
 			return 1
 			;;
@@ -3276,6 +3425,7 @@ run_node_install_method() {
 		apt) install_node_with_apt ;;
 		apk) install_node_with_apk ;;
 		standalone) install_node_standalone ;;
+		musl) install_node_musl ;;
 	esac
 }
 
@@ -3350,6 +3500,76 @@ install_node_standalone() {
 	rm -rf "$node_dir"
 	printf 'Extracting Node.js to %s\n' "$node_dir"
 	tar -xf "$node_tmp_dir/$node_file" -C "$node_base_dir"
+	rm -f "$node_base_dir/current"
+	ln -s "$node_dir" "$node_base_dir/current"
+	rm -rf "$node_tmp_dir"
+	printf 'Node.js installed at %s\n' "$node_dir"
+}
+
+# Node.js 22 for a musl Linux (Alpine): the Node.js project's musl build from unofficial-builds.nodejs.org, checked
+# against that release's SHASUMS256.txt like the nodejs.org download above, into the same folder this account owns.
+# nodejs.org's own Linux builds need glibc, so they are never used here. The build links libstdc++, which Alpine's
+# base image leaves out: apk adds it (the one step that needs sudo).
+install_node_musl() {
+	node_arch=$(node_musl_arch) || {
+		printf 'There is no musl build of Node.js for %s.\n' "$(uname -m)"
+		return 1
+	}
+	node_dist_base="https://unofficial-builds.nodejs.org/download/release"
+	node_base_dir=$(node_standalone_base_dir)
+	node_tmp_dir=$(create_temp_dir)
+	mkdir -p "$node_tmp_dir" "$node_base_dir"
+
+	printf 'Finding the newest Node.js 22 musl build for %s\n' "$node_arch"
+	curl -fsSL "$node_dist_base/index.json" -o "$node_tmp_dir/index.json" || {
+		printf 'Could not read %s/index.json\n' "$node_dist_base"
+		rm -rf "$node_tmp_dir"
+		return 1
+	}
+	# One release per line, newest first: the first v22 that lists this machine's musl build.
+	node_version=$(awk -v want="\"linux-$node_arch-musl\"" '
+		index($0, "\"version\":\"v22.") && index($0, want) { sub(/.*"version":"/, ""); sub(/".*/, ""); print; exit }
+	' "$node_tmp_dir/index.json")
+	case "$node_version" in
+		v22.[0-9]*.[0-9]*) ;;
+		*)
+			printf 'unofficial-builds.nodejs.org lists no Node.js 22 musl build for %s.\n' "$node_arch"
+			rm -rf "$node_tmp_dir"
+			return 1
+			;;
+	esac
+	case "$node_version" in
+		*[!v0-9.]*)
+			printf 'Unexpected Node.js version in the release list: %s\n' "$node_version"
+			rm -rf "$node_tmp_dir"
+			return 1
+			;;
+	esac
+	if ! node_version_string_is_new_enough "$node_version"; then
+		printf 'The newest Node.js 22 musl build is %s, older than the %s Relay needs.\n' "$node_version" "$relay_min_node"
+		rm -rf "$node_tmp_dir"
+		return 1
+	fi
+	node_file="node-$node_version-linux-$node_arch-musl.tar.gz"
+	curl -fsSL "$node_dist_base/$node_version/SHASUMS256.txt" -o "$node_tmp_dir/SHASUMS256.txt"
+	if ! awk -v file="$node_file" '$2 == file { found = 1 } END { exit found ? 0 : 1 }' "$node_tmp_dir/SHASUMS256.txt"; then
+		printf '%s is not in its release'"'"'s SHASUMS256.txt.\n' "$node_file"
+		rm -rf "$node_tmp_dir"
+		return 1
+	fi
+
+	printf 'Downloading Node.js %s\n' "${node_file%.tar.gz}"
+	curl -fsSL "$node_dist_base/$node_version/$node_file" -o "$node_tmp_dir/$node_file"
+	verify_node_standalone_download "$node_tmp_dir" "$node_file"
+	if ! node_musl_has_libstdcxx; then
+		printf 'Installing libstdc++, which Node.js needs, with apk\n'
+		run_with_sudo apk add --update-cache libstdc++
+	fi
+
+	node_dir="$node_base_dir/${node_file%.tar.gz}"
+	rm -rf "$node_dir"
+	printf 'Extracting Node.js to %s\n' "$node_dir"
+	tar -xzf "$node_tmp_dir/$node_file" -C "$node_base_dir"
 	rm -f "$node_base_dir/current"
 	ln -s "$node_dir" "$node_base_dir/current"
 	rm -rf "$node_tmp_dir"
@@ -3511,15 +3731,13 @@ configure_relay_path_quietly() {
 		print_relay_path_manual_instructions
 		return 0
 	}
-	if shell_profile_has_relay_path "$profile"; then
+	relay_add_path_lines "$profile"
+	if [ "$relay_ap_count" = 0 ]; then
 		relay_step_done "Your PATH line for Relay is already in $(relay_display_path "$profile")"
+	elif [ "$relay_ap_verb" = Moved ]; then
+		relay_step_done "Moved your PATH line for Relay to the top of $relay_ap_changed"
 	else
-		mkdir -p "$(dirname "$profile")"
-		{
-			printf '\n# %s\n' "$relay_path_comment"
-			printf '%s\n' "$(relay_path_line)"
-		} >>"$profile"
-		relay_step_done "Added Relay to your PATH in $(relay_display_path "$profile")"
+		relay_step_done "Added Relay to your PATH in $relay_ap_changed"
 	fi
 	print_retired_alias_note
 	print_relay_claude_plan_reminder
@@ -3573,9 +3791,127 @@ shell_profile_has_relay_path() {
 	[ -f "$profile" ] && grep -F "$relay_path_bin" "$profile" >/dev/null 2>&1
 }
 
+# Writes the PATH line ("# <comment>" then the export) where the shell reads it, once. Leaves which files changed in
+# relay_ap_changed ("~/.bashrc and ~/.profile"), how many in relay_ap_count (0: it was all there already), and
+# relay_ap_verb: "Added", or "Moved" when the only change was moving an earlier line to the top of ~/.bashrc.
+#
+# bash: Debian's and Ubuntu's ~/.bashrc begin with "case $- in *i*) ;; *) return;; esac", so a line at its end never
+# runs for `ssh host relay`, `bash -lc relay`, cron or CI. The line goes at the top of ~/.bashrc instead, above that
+# check (an earlier installer's line at the end is moved there), and into the file bash reads for login shells
+# (~/.bash_profile, else ~/.bash_login, else ~/.profile) unless that file reads ~/.bashrc itself. ~/.bash_profile is
+# never created: bash would stop reading ~/.profile. zsh and every other shell: appended to the profile, as before.
+#   $1 the profile
+relay_add_path_lines() {
+	relay_ap_changed=
+	relay_ap_count=0
+	relay_ap_verb=Added
+	relay_ap_comment="# $relay_path_comment"
+	relay_ap_export=$(relay_path_line)
+	if [ -n "${HOME:-}" ] && [ "$1" = "$HOME/.bashrc" ]; then
+		relay_add_path_bashrc "$1"
+		relay_add_path_bash_login
+		return 0
+	fi
+	shell_profile_has_relay_path "$1" && return 0
+	mkdir -p "$(dirname "$1")"
+	printf '\n%s\n%s\n' "$relay_ap_comment" "$relay_ap_export" >>"$1"
+	relay_ap_note "$1"
+}
+
+relay_ap_note() {
+	relay_ap_count=$((relay_ap_count + 1))
+	relay_ap_changed="${relay_ap_changed:+$relay_ap_changed and }$(relay_display_path "$1")"
+}
+
+# The line at the top of ~/.bashrc, then a blank line, then the file as it was.   $1 ~/.bashrc
+relay_add_path_bashrc() {
+	if [ -f "$1" ] && [ "$(sed -n 1p "$1")" = "$relay_ap_comment" ] && [ "$(sed -n 2p "$1")" = "$relay_ap_export" ]; then
+		return 0
+	fi
+	relay_ap_moved=0
+	if shell_profile_has_relay_path "$1"; then
+		# The person's own line for this folder stays as it is; only the installer's own (its comment, then its export)
+		# moves to the top.
+		relay_ap_has_block "$1" || return 0
+		relay_ap_moved=1
+	fi
+	relay_ap_tmp="$1.relay-path.$$"
+	{
+		printf '%s\n%s\n' "$relay_ap_comment" "$relay_ap_export"
+		if [ -s "$1" ]; then
+			printf '\n'
+			relay_ap_without_block "$1"
+		fi
+	} >"$relay_ap_tmp" || {
+		rm -f "$relay_ap_tmp"
+		return 1
+	}
+	# Written through, not renamed over: a ~/.bashrc that is a link to a dotfiles repository stays a link.
+	cat "$relay_ap_tmp" >"$1"
+	rm -f "$relay_ap_tmp"
+	[ "$relay_ap_moved" = 1 ] && relay_ap_verb=Moved
+	relay_ap_note "$1"
+}
+
+# relay_ap_has_block, for a caller that has not set the comment and the line yet.   $1 the file
+relay_ap_has_block_in() {
+	relay_ap_comment="# $relay_path_comment"
+	relay_ap_export=$(relay_path_line)
+	relay_ap_has_block "$1"
+}
+
+# Whether the file holds the installer's own block for this folder: its comment line, then its export line.
+relay_ap_has_block() {
+	relay_ap_c="$relay_ap_comment" relay_ap_e="$relay_ap_export" awk '
+		prev == ENVIRON["relay_ap_c"] && $0 == ENVIRON["relay_ap_e"] { found = 1 }
+		{ prev = $0 }
+		END { exit found ? 0 : 1 }
+	' "$1"
+}
+
+# The file without the installer's own block for this folder (and the blank line above it).
+relay_ap_without_block() {
+	relay_ap_c="$relay_ap_comment" relay_ap_e="$relay_ap_export" awk '
+		{ line[NR] = $0 }
+		END {
+			for (i = 1; i < NR; i++) {
+				if (line[i] == ENVIRON["relay_ap_c"] && line[i + 1] == ENVIRON["relay_ap_e"]) {
+					drop[i] = 1; drop[i + 1] = 1
+					if (i > 1 && line[i - 1] == "") drop[i - 1] = 1
+				}
+			}
+			for (i = 1; i <= NR; i++) if (!drop[i]) print line[i]
+		}
+	' "$1"
+}
+
+# Login shells (`bash -l`, a new Terminal tab on a Mac) read the first of these that exists, and not ~/.bashrc.
+relay_add_path_bash_login() {
+	relay_ap_login=
+	for relay_ap_try in "$HOME/.bash_profile" "$HOME/.bash_login" "$HOME/.profile"; do
+		if [ -f "$relay_ap_try" ]; then
+			relay_ap_login="$relay_ap_try"
+			break
+		fi
+	done
+	if [ -z "$relay_ap_login" ]; then
+		# None: ~/.profile, which bash reads only when there is no ~/.bash_profile or ~/.bash_login.
+		relay_ap_login="$HOME/.profile"
+		printf '%s\n%s\n' "$relay_ap_comment" "$relay_ap_export" >"$relay_ap_login"
+		relay_ap_verb=Added
+		relay_ap_note "$relay_ap_login"
+		return 0
+	fi
+	shell_profile_has_relay_path "$relay_ap_login" && return 0
+	# It reads ~/.bashrc (Debian's and Ubuntu's ~/.profile do), whose first line is now this one.
+	grep -E '^[^#]*(\.|source)[[:space:]]+[^#]*\.bashrc' "$relay_ap_login" >/dev/null 2>&1 && return 0
+	printf '\n%s\n%s\n' "$relay_ap_comment" "$relay_ap_export" >>"$relay_ap_login"
+	relay_ap_verb=Added
+	relay_ap_note "$relay_ap_login"
+}
+
 prompt_add_relay_path() {
 	profile="$1"
-	path_line=$(relay_path_line)
 
 	if ! relay_prompt_yes_no \
 		"Add $relay_path_label to your PATH?" \
@@ -3589,15 +3925,11 @@ prompt_add_relay_path() {
 		return 0
 	fi
 
-	mkdir -p "$(dirname "$profile")"
-	{
-		printf '\n# %s\n' "$relay_path_comment"
-		printf '%s\n' "$path_line"
-	} >>"$profile"
+	relay_add_path_lines "$profile"
 	if [ "$relay_screen_enabled" = 1 ]; then
 		relay_screen "Relay installed" "" "Run: $(relay_source_profile_command "$profile")" ""
 	else
-		printf 'Added %s to %s.\n' "$relay_path_bin" "$profile"
+		printf 'Added %s to %s.\n' "$relay_path_bin" "${relay_ap_changed:-$profile}"
 		printf 'Restart your shell or run: %s\n' "$(relay_source_profile_command "$profile")"
 	fi
 }
@@ -3645,7 +3977,7 @@ download_relay_package() {
 
 	# Only fetched once release keys are pinned (or a signature is required): until then the download is what it was.
 	signature_path="$download_dir/SHA256SUMS.sig"
-	if [ -n "$relay_release_signers" ] || relay_signature_required; then
+	if relay_signature_applies; then
 		if ! curl -fsSL "$checksums_url.sig" -o "$signature_path" 2>/dev/null; then
 			rm -f "$signature_path"
 		fi
@@ -3711,31 +4043,34 @@ relay_run_checksum_check() {
 }
 
 # Release signatures (D-78). SHA256SUMS lists every file of a release, so its signatures cover the package just
-# checked against it. RELAY_REQUIRE_SIGNATURE=1 refuses a release whose signatures do not verify, =0 never does, and
-# unset takes the default pinned above (warn-only: say so, and install what passed its SHA-256 checksum).
+# checked against it. A signature is checked whenever Relay's release keys are pinned above, or RELAY_REQUIRE_SIGNATURE=1
+# asks for one; then a signature that is missing or does not verify refuses the install (product call, 25 Nov 2026:
+# never "installing it anyway"), and nothing is installed. With no key pinned and no signature asked for, the release
+# installs on its SHA-256 checksum alone and nothing is said about signatures. RELAY_REQUIRE_SIGNATURE=0 is still
+# accepted and changes nothing: it cannot turn a pinned key's check off.
 relay_signature_required() {
 	case "${RELAY_REQUIRE_SIGNATURE:-}" in
 		1|true|yes|required) return 0 ;;
-		0|false|no|warn) return 1 ;;
 	esac
 	[ "$relay_require_signature_default" = 1 ]
 }
 
+# Whether this install checks a signature: a release key is pinned, or one is required.
+relay_signature_applies() {
+	[ -n "$relay_release_signers" ] || relay_signature_required
+}
+
+#   $1 what happened, as one line ("relay 0.6.122 has no release signature")
 relay_signature_refuse() {
 	if relay_quiet; then
-		# Inline (O10): the step stops, with whose it is and what to do next.
-		relay_sr_first=$(printf '%s' "$1" | sed 's/^error: //')
-		shift
-		relay_stop 3 "" "$(relay_x "stopped · $relay_sr_first")" \
-			"  cause: Relay's release, not your machine · the download was deleted · $(relay_untouched)" \
-			"$@" \
+		# Inline (O10): the step stops, with what happened and one next step.
+		relay_stop 3 "" "$(relay_x "stopped · $1")" \
+			"$(relay_nothing "nothing was installed" "the download was deleted · $(relay_untouched)")" \
 			"  next: run the same command again in a few minutes · fails twice? report it: relayevals.com/security"
 	fi
 	relay_restore_terminal
-	printf '\n' >&2
-	for relay_refusal_line in "$@"; do
-		printf '%s\n' "$relay_refusal_line" >&2
-	done
+	printf '\nerror: %s. Nothing was installed.\n' "$1" >&2
+	printf 'Run the same command again in a few minutes. Fails twice? Report it: relayevals.com/security\n' >&2
 	exit 1
 }
 
@@ -3755,25 +4090,19 @@ verify_relay_release_signature() {
 	signature_version="$1"
 	signature_message="$2"
 	signature_file="$3"
+	relay_signature_applies || return 0
 	if [ -z "$relay_release_signers" ]; then
-		relay_signature_required || return 0
-		relay_signature_refuse \
-			"error: this installer has no release keys to check Relay v$signature_version's signature with, and a signature is required. Nothing was installed."
+		relay_signature_refuse "this installer has no release keys to check relay $signature_version's signature with"
 	fi
 	if [ ! -s "$signature_file" ]; then
-		if relay_signature_required; then
-			relay_signature_refuse \
-				"error: Relay v$signature_version has no release signature, and Relay requires one. Nothing was installed." \
-				"To install it with only its SHA-256 checksum, run again with RELAY_REQUIRE_SIGNATURE=0."
-		fi
-		relay_signature_tell "Warning: Relay v$signature_version has no release signature. Installing it anyway: it passed its SHA-256 checksum."
-		return 0
+		relay_signature_refuse "relay $signature_version has no release signature"
 	fi
 
 	signature_dir=$(dirname "$signature_message")
 	printf '%s\n' "$relay_release_signers" >"$signature_dir/allowed_signers"
 	# With Node (always, on the npm path) the checker this script carries; without it (the native build) ssh-keygen,
 	# under the same rules and with the same reasons.
+	signature_result=
 	if relay_node_can_verify; then
 		relay_write_signature_verifier "$signature_dir/relay-release-signature.mjs"
 		if signature_result=$(node "$signature_dir/relay-release-signature.mjs" "$signature_message" "$signature_file" \
@@ -3793,11 +4122,7 @@ verify_relay_release_signature() {
 		"failed "*) signature_reason="${signature_result#failed }" ;;
 		*) signature_reason="the signature could not be checked" ;;
 	esac
-	if relay_signature_required; then
-		relay_signature_refuse \
-			"error: Relay v$signature_version's release signature did not verify: $signature_reason. Nothing was installed. Please tell arnav@relayevals.com."
-	fi
-	relay_signature_tell "Warning: Relay v$signature_version's release signature did not verify: $signature_reason. Installing it anyway: it passed its SHA-256 checksum. RELAY_REQUIRE_SIGNATURE=1 refuses a download like this."
+	relay_signature_refuse "relay $signature_version's release signature did not verify: $signature_reason"
 }
 
 # BEGIN RELAY SIGNATURE VERIFIER: scripts/lib/release-signature.mjs, copied by scripts/sync-release-trust.mjs. Do not edit here.
@@ -4178,7 +4503,7 @@ confirm_kernel_runtime_setup() {
 
 	if relay_prompt_yes_no \
 		"Prepare Python runtime now?" \
-		"Installs uv, Python 3.11, and the Relay runtime." \
+		"Installs uv, Python 3.11 and the Relay runtime in ~/.relay." \
 		"Prepare? [Y/n]"; then
 		relay_bootstrap_kernel_on_install=1
 		return
@@ -4261,7 +4586,7 @@ clear_retired_gate_alias() {
 print_retired_alias_note() {
 	[ -n "$relay_retired_alias_removed" ] || return 0
 	relay_finish_hint="open a new terminal, then run: $relay_cmd"
-	printf '\nRemoved %s. It started the retired relayevals CLI instead of this install.\n' "$(relay_display_path "$relay_retired_alias_removed")"
+	printf '\nRemoved %s, an old %s command that started a different program.\n' "$(relay_display_path "$relay_retired_alias_removed")" "$relay_cmd"
 	printf 'Open a new terminal window before you type %s.\n' "$relay_cmd"
 	relay_retired_alias_removed=
 }
